@@ -8,12 +8,28 @@
 #include "hmderrors_public.h"
 #include <vrcore/strtools_public.h>
 #include <vrcore/vrpathregistry_public.h>
+#include "WrappedIVRCompositor.h"
 #include <mutex>
+
+#include "Config.h"
+#include "MinHook.h"
+#undef interface
 
 using vr::EVRInitError;
 using vr::IVRSystem;
 using vr::IVRClientCore;
 using vr::VRInitError_None;
+
+MH_STATUS WINAPI MH_CreateHookVirtualEx(
+    LPVOID pInstance, UINT methodPos, LPVOID pDetour, LPVOID *ppOriginal, LPVOID *ppTarget)
+{
+    LPVOID* pVMT = *((LPVOID**)pInstance);
+    LPVOID  pTarget = pVMT[methodPos];
+
+    if (ppTarget != NULL)
+        *ppTarget = pTarget;
+    return MH_CreateHook(pTarget, pDetour, ppOriginal);
+}
 
 // figure out how to import from the VR API dll
 #if defined(_WIN32)
@@ -28,12 +44,16 @@ using vr::VRInitError_None;
 
 #define VR_EXPORT_INTERFACE extern "C" __attribute__((visibility("default")))
 
+
 #else
 #error "Unsupported Platform."
 #endif
 
 namespace vr
 {
+namespace {
+	WrappedIVRCompositor wrappedCompositor;
+}
 
 static void *g_pVRModule = NULL;
 static IVRClientCore *g_pHmdSystem = NULL;
@@ -171,9 +191,31 @@ EVRInitError VR_LoadHmdSystemInternal()
 }
 
 
+typedef void (*IVRSystem_GetRecommendedRenderTargetSize_Orig)(IVRSystem *self, uint32_t *pnWidth, uint32_t *pnHeight);
+IVRSystem_GetRecommendedRenderTargetSize_Orig pOrigGetRecommendedRenderTargetSize = nullptr;
+	
+static void IVRSystem_GetRecommendedRenderTargetSize(IVRSystem *self, uint32_t *pnWidth, uint32_t *pnHeight) {
+	pOrigGetRecommendedRenderTargetSize(self, pnWidth, pnHeight);
+	if (Config::Instance().fsrEnabled && Config::Instance().fsrQuality < 1) {
+		*pnWidth *= Config::Instance().fsrQuality;
+		*pnHeight *= Config::Instance().fsrQuality;
+	}
+	log() << "Recommended render target size: " << *pnWidth << "x" << *pnHeight << "\n";
+}
+
+typedef EVRCompositorError (*IVRCompositor_Submit_012_Orig)(IVRCompositor *self, EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t *pBounds, EVRSubmitFlags nSubmitFlags);
+IVRCompositor_Submit_012_Orig pOrigSubmit012 = nullptr;
+
+static EVRCompositorError IVRCompositor_Submit_012(IVRCompositor *self, EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t *pBounds, EVRSubmitFlags nSubmitFlags) {
+	wrappedCompositor.Submit(eEye, pTexture, pBounds, nSubmitFlags);
+	return pOrigSubmit012(self, eEye, pTexture, pBounds, nSubmitFlags);
+}
+
+
 void *VR_GetGenericInterface(const char *pchInterfaceVersion, EVRInitError *peError)
 {
 	std::lock_guard<std::recursive_mutex> lock( g_mutexSystem );
+	MH_Initialize();
 
 	if (!g_pHmdSystem)
 	{
@@ -182,7 +224,44 @@ void *VR_GetGenericInterface(const char *pchInterfaceVersion, EVRInitError *peEr
 		return NULL;
 	}
 
-	return g_pHmdSystem->GetGenericInterface(pchInterfaceVersion, peError);
+	void *interface = g_pHmdSystem->GetGenericInterface(pchInterfaceVersion, peError);
+	// Only install hooks once, for the first interface version encountered to avoid duplicated hooks
+	// This is necessary because vrclient.dll may create an internal instance with a different version than the application to translate older versions, which with hooks installed for both would cause an infinite loop
+
+	static unsigned int system_version = 0;
+	if (system_version == 0 && std::sscanf(pchInterfaceVersion, "IVRSystem_%u", &system_version)) {
+		LPVOID pTarget = nullptr;
+		// The 'IVRSystem::GetRecommendedRenderTargetSize' function definition has been the same since the initial
+		// release of OpenVR; however, in early versions there was an additional method in front of it.
+		UINT methodPos = (system_version >= 9 ? 0 : 1);
+		MH_CreateHookVirtualEx(interface, methodPos, IVRSystem_GetRecommendedRenderTargetSize, (void**)&pOrigGetRecommendedRenderTargetSize, &pTarget);
+		if (pTarget) {
+			log() << "Injecting " << pchInterfaceVersion << std::endl;
+			MH_EnableHook(pTarget);
+		}
+	}
+
+	static unsigned int compositor_version = 0;
+	if (compositor_version == 0 && std::sscanf(pchInterfaceVersion, "IVRCompositor_%u", &compositor_version))
+	{
+		// The 'IVRCompositor::Submit' function definition has been stable and has had the same virtual function table index since the OpenVR 1.0 release (which was at 'IVRCompositor_015')
+		LPVOID pTarget = nullptr;
+		if (compositor_version >= 12)
+			MH_CreateHookVirtualEx(interface, 5, IVRCompositor_Submit_012, (void**)&pOrigSubmit012, &pTarget);
+		/*else if (compositor_version >= 9)
+			reshade::hooks::install("IVRCompositor::Submit", vtable_from_instance(static_cast<vr::IVRCompositor *>(interface_instance)), 4, reinterpret_cast<reshade::hook::address>(IVRCompositor_Submit_009));
+		else if (compositor_version == 8)
+			reshade::hooks::install("IVRCompositor::Submit", vtable_from_instance(static_cast<vr::IVRCompositor *>(interface_instance)), 6, reinterpret_cast<reshade::hook::address>(IVRCompositor_Submit_008));
+		else if (compositor_version == 7)
+			reshade::hooks::install("IVRCompositor::Submit", vtable_from_instance(static_cast<vr::IVRCompositor *>(interface_instance)), 6, reinterpret_cast<reshade::hook::address>(IVRCompositor_Submit_007));
+		*/
+		if (pTarget) {
+			log() << "Injecting " << pchInterfaceVersion << std::endl;
+			MH_EnableHook(pTarget);
+		}
+	}
+
+	return interface;
 }
 
 bool VR_IsInterfaceVersionValid(const char *pchInterfaceVersion)
