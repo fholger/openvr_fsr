@@ -17,12 +17,12 @@ if(APPLE)
 elseif(WIN32)
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     add_definitions( -DWIN64 )
-    set( LIBNAME "openvr_api64" )
+    #set( LIBNAME "openvr_api64" )
   endif()
 endif()
 
 # Add include folders.
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/headers ${CMAKE_SOURCE_DIR}/src/vrcommon)
+include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/minhook/include ${CMAKE_SOURCE_DIR}/headers ${CMAKE_SOURCE_DIR}/src/vrcommon ${CMAKE_CURRENT_BINARY_DIR})
 
 if(USE_CUSTOM_LIBCXX)
 	link_directories(
@@ -43,11 +43,32 @@ set(VRCOMMON_FILES
 	vrcommon/hmderrors_public.cpp
 	vrcommon/vrpathregistry_public.cpp
 	vrcommon/strtools_public.cpp
+	vrcommon/WrappedIVRCompositor.h
+	vrcommon/WrappedIVRCompositor.cpp
+	vrcommon/Config.h
+)
+set(FSR_FILES
+	fsr/fsr_up.h
+	fsr/fsr_cas.h
+)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(MINHOOK_HDE minhook/src/hde/hde64.c)
+else()
+	set(MINHOOK_HDE minhook/src/hde/hde32.c)
+endif()
+set(MINHOOK_FILES
+	minhook/src/buffer.c
+	minhook/src/buffer.h
+	minhook/src/hook.c
+	minhook/src/trampoline.c
+	"${MINHOOK_HDE}"
 )
 
 set(SOURCE_FILES
 	${CORE_FILES}
 	${VRCOMMON_FILES}
+	${FSR_FILES}
+	${MINHOOK_FILES}
 )
 
 source_group("Src" FILES
@@ -58,18 +79,26 @@ source_group("VRCommon" FILES
 	${VRCOMMON_FILES}
 )
 
+source_group("FSR" FILES
+	${FSR_FILES}
+)
+
+source_group("MinHook" FILES
+	${MINHOOK_FILES}
+)
+
 # Build the library.
 if(BUILD_SHARED)
 	add_library(${LIBNAME} SHARED ${SOURCE_FILES})
 elseif(BUILD_FRAMEWORK)
 	set( LIBNAME "OpenVR" )
 	add_library( ${LIBNAME} 
-            SHARED ${SOURCE_FILES}
-            ${CMAKE_SOURCE_DIR}/headers/openvr.h
-            ${CMAKE_SOURCE_DIR}/headers/openvr_api.cs
-            ${CMAKE_SOURCE_DIR}/headers/openvr_api.json
-            ${CMAKE_SOURCE_DIR}/headers/openvr_capi.h
-            ${CMAKE_SOURCE_DIR}/headers/openvr_driver.h
+			SHARED ${SOURCE_FILES}
+			${CMAKE_SOURCE_DIR}/headers/openvr.h
+			${CMAKE_SOURCE_DIR}/headers/openvr_api.cs
+			${CMAKE_SOURCE_DIR}/headers/openvr_api.json
+			${CMAKE_SOURCE_DIR}/headers/openvr_capi.h
+			${CMAKE_SOURCE_DIR}/headers/openvr_driver.h
 	)
 	set_target_properties(OpenVR PROPERTIES
 		FRAMEWORK TRUE
