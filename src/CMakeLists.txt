@@ -22,7 +22,7 @@ elseif(WIN32)
 endif()
 
 # Add include folders.
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/minhook/include ${CMAKE_SOURCE_DIR}/headers ${CMAKE_SOURCE_DIR}/src/vrcommon ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/minhook/include ${CMAKE_SOURCE_DIR}/headers ${CMAKE_SOURCE_DIR}/src/vrcommon ${CMAKE_SOURCE_DIR}/src/postprocess ${CMAKE_CURRENT_BINARY_DIR})
 
 if(USE_CUSTOM_LIBCXX)
 	link_directories(
@@ -43,9 +43,14 @@ set(VRCOMMON_FILES
 	vrcommon/hmderrors_public.cpp
 	vrcommon/vrpathregistry_public.cpp
 	vrcommon/strtools_public.cpp
-	vrcommon/WrappedIVRCompositor.h
-	vrcommon/WrappedIVRCompositor.cpp
-	vrcommon/Config.h
+)
+set(POSTPROCESS_FILES
+	postprocess/Config.h
+	postprocess/Config.cpp
+	postprocess/VrHooks.h
+	postprocess/VrHooks.cpp
+	postprocess/WrappedIVRCompositor.h
+	postprocess/WrappedIVRCompositor.cpp
 )
 set(FSR_FILES
 	fsr/fsr_up.h
@@ -67,6 +72,7 @@ set(MINHOOK_FILES
 set(SOURCE_FILES
 	${CORE_FILES}
 	${VRCOMMON_FILES}
+	${POSTPROCESS_FILES}
 	${FSR_FILES}
 	${MINHOOK_FILES}
 )
@@ -77,6 +83,10 @@ source_group("Src" FILES
 
 source_group("VRCommon" FILES
 	${VRCOMMON_FILES}
+)
+
+source_group("PostProcess" FILES
+	${POSTPROCESS_FILES}
 )
 
 source_group("FSR" FILES
