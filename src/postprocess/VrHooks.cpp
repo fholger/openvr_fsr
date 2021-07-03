@@ -41,8 +41,16 @@ namespace {
 	}
 
 	vr::EVRCompositorError IVRCompositor012_Submit(vr::IVRCompositor *self, vr::EVREye eEye, const vr::Texture_t *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
+		void *origHandle = pTexture->handle;
+
 		wrappedCompositor.Submit(eEye, pTexture, pBounds, nSubmitFlags);
-		return CallOriginal(IVRCompositor012_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
+		vr::EVRCompositorError error = CallOriginal(IVRCompositor012_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
+		if (error != vr::VRCompositorError_None) {
+			Log() << "Error when submitting for eye " << eEye << ": " << error << std::endl;
+		}
+
+		const_cast<vr::Texture_t*>(pTexture)->handle = origHandle;
+		return error;
 	}
 }
 

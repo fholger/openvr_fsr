@@ -188,7 +188,6 @@ namespace vr {
 				}
 			}
 
-			context->OMSetRenderTargets( 0, nullptr, nullptr );
 			UINT uavCount = -1;
 			context->CSSetUnorderedAccessViews( 0, 1, upscaledTextureUav.GetAddressOf(), &uavCount );
 			context->CSSetConstantBuffers( 0, 1, upscaleConstantsBuffer.GetAddressOf() );
@@ -201,8 +200,10 @@ namespace vr {
 			context->CSSetShaderResources( 0, 1, upscaledTextureView.GetAddressOf() );
 			context->CSSetShader( fsrSharpenShader.Get(), nullptr, 0 );
 			context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
-			context->CSSetShaderResources( 0, 0, nullptr );
-			context->CSSetUnorderedAccessViews( 0, 0, nullptr, nullptr );
+			ID3D11ShaderResourceView *unbindSRV[1] = {nullptr};
+			context->CSSetShaderResources( 0, 1, unbindSRV );
+			ID3D11UnorderedAccessView *unbindUAV[1] = {nullptr};
+			context->CSSetUnorderedAccessViews( 0, 1, unbindUAV, &uavCount );
 			context->CSSetConstantBuffers( 0, 0, nullptr );
 			context->CSSetShader( nullptr, nullptr, 0 );
 		}
