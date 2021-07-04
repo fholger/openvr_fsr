@@ -132,4 +132,10 @@ endif()
 
 target_link_libraries(${LIBNAME} ${EXTRA_LIBS})
 
+add_custom_command(TARGET ${LIBNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+		${CMAKE_CURRENT_SOURCE_DIR}/openvr_mod.cfg
+		$<TARGET_FILE_DIR:${LIBNAME}>
+)
+
 install(TARGETS ${LIBNAME} DESTINATION lib)
