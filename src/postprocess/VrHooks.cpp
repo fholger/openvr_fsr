@@ -33,9 +33,9 @@ namespace {
 	void IVRSystem_GetRecommendedRenderTargetSize(vr::IVRSystem *self, uint32_t *pnWidth, uint32_t *pnHeight) {
 		CallOriginal(IVRSystem_GetRecommendedRenderTargetSize)(self, pnWidth, pnHeight);
 
-		if (Config::Instance().fsrEnabled && Config::Instance().fsrQuality < 1) {
-			*pnWidth *= Config::Instance().fsrQuality;
-			*pnHeight *= Config::Instance().fsrQuality;
+		if (Config::Instance().fsrEnabled && Config::Instance().renderScale < 1) {
+			*pnWidth *= Config::Instance().renderScale;
+			*pnHeight *= Config::Instance().renderScale;
 		}
 		//Log() << "Recommended render target size: " << *pnWidth << "x" << *pnHeight << "\n";
 	}

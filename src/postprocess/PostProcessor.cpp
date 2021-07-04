@@ -293,12 +293,12 @@ namespace vr {
 		inputWidth = std.Width;
 		inputHeight = std.Height;
 
-		if ( Config::Instance().fsrQuality < 1.f) {
-			outputWidth = std.Width / Config::Instance().fsrQuality;
-			outputHeight = std.Height / Config::Instance().fsrQuality;
+		if ( Config::Instance().renderScale < 1.f) {
+			outputWidth = std.Width / Config::Instance().renderScale;
+			outputHeight = std.Height / Config::Instance().renderScale;
 		} else {
-			outputWidth = std.Width * Config::Instance().fsrQuality;
-			outputHeight = std.Height * Config::Instance().fsrQuality;
+			outputWidth = std.Width * Config::Instance().renderScale;
+			outputHeight = std.Height * Config::Instance().renderScale;
 		}
 
 		if (!(std.BindFlags & D3D11_BIND_SHADER_RESOURCE) || std.SampleDesc.Count > 1) {
@@ -308,7 +308,7 @@ namespace vr {
 		}
 
 		if (Config::Instance().fsrEnabled) {
-			if (Config::Instance().fsrQuality != 1) {
+			if (Config::Instance().renderScale != 1) {
 				PrepareUpscalingResources();
 			}
 			PrepareSharpeningResources();
@@ -326,7 +326,7 @@ namespace vr {
 
 		context->OMSetRenderTargets(0, nullptr, nullptr);
 
-		if (Config::Instance().fsrEnabled && Config::Instance().fsrQuality != 1) {
+		if (Config::Instance().fsrEnabled && Config::Instance().renderScale != 1) {
 			ApplyUpscaling(inputView);
 			inputView = upscaledTextureView.Get();
 			outputTexture = upscaledTexture.Get();
