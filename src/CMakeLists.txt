@@ -50,8 +50,8 @@ set(POSTPROCESS_FILES
 	postprocess/Config.cpp
 	postprocess/VrHooks.h
 	postprocess/VrHooks.cpp
-	postprocess/WrappedIVRCompositor.h
-	postprocess/WrappedIVRCompositor.cpp
+	postprocess/PostProcessor.h
+	postprocess/PostProcessor.cpp
 )
 set(FSR_FILES
 	fsr/fsr_up.h
