@@ -1,6 +1,6 @@
 #include "VrHooks.h"
 #include "Config.h"
-#include "WrappedIVRCompositor.h"
+#include "PostProcessor.h"
 
 #include <openvr.h>
 #include <MinHook.h>
@@ -12,7 +12,7 @@ namespace {
 	bool ivrSystemHooked = false;
 	bool ivrCompositorHooked = false;
 
-	vr::WrappedIVRCompositor wrappedCompositor;
+	vr::PostProcessor postProcessor;
 
 	void InstallVirtualFunctionHook(void *instance, uint32_t methodPos, void *hookFunction) {
 		LPVOID* vtable = *((LPVOID**)instance);
@@ -43,7 +43,7 @@ namespace {
 	vr::EVRCompositorError IVRCompositor012_Submit(vr::IVRCompositor *self, vr::EVREye eEye, const vr::Texture_t *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
 		void *origHandle = pTexture->handle;
 
-		wrappedCompositor.Submit(eEye, pTexture, pBounds, nSubmitFlags);
+		postProcessor.Apply(eEye, pTexture, pBounds, nSubmitFlags);
 		vr::EVRCompositorError error = CallOriginal(IVRCompositor012_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
 		if (error != vr::VRCompositorError_None) {
 			Log() << "Error when submitting for eye " << eEye << ": " << error << std::endl;
@@ -65,6 +65,7 @@ void ShutdownHooks() {
 	hooksToOriginal.clear();
 	ivrSystemHooked = false;
 	ivrCompositorHooked = false;
+	postProcessor.Reset();
 }
 
 void HookVRInterface(const char *version, void *instance) {
