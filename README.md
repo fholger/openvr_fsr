@@ -1,23 +1,28 @@
-Modified OpenVR DLL for Fallout 4 VR
+Modified OpenVR DLL with AMD FidelityFX SuperResolution Upscaler
 ---
 
-This is a quick and dirty hack to "misreport" the Index controllers as Oculus
-touch inputs to get usable controlls in FO4VR. Just grep the openvr_api.dll
-from `Releases` and copy it into your Fallout 4 VR dir, overwriting the one
-already there.
+This modified openvr_api.dll allows you to apply FidelityFX SuperResolution
+upscaling to many SteamVR games, as long as they use D3D11.
 
-Note: you still need to modify the SteamVR controller bindings for Fallout 4 VR,
-because the default legacy bindings are not suitable. Open the SteamVR dashboard,
-go to Settings -> Controller Settings, select Fallout 4 VR in the list on the
-right. See if you can find my customized bindings (by CABAListic).
+To install, find the location of the openvr_api.dll in the game's installation
+folder: 
+- It might be located right next to the main executable (e.g. Skyrim, FO4).
+- For Unity games, look in: `<GameDir>\<Game>_Data\Plugins`
+- For Unreal 4 games, look in: `<GameDir>\Engine\Binaries\ThirdParty\OpenVR\OpenVRvX_Y_Z`
 
-If not, edit the default legacy bindings. Here's what you need to do:
+Rename the existing `openvr_api.dll` to `openvr_api.orig.dll`, then extract both
+the `openvr_api.dll` and the `openvr_mod.cfg` from the archive to this directory.
+You should now edit the `openvr_mod.cfg` to your liking and adjust the `renderScale`
+and `sharpness` parameters to your liking.
 
-1. remove the "Use as button" action from both thumbsticks.
-2. modify the "A button" mapping for both controllers to map to the 
-   "left/right A button" instead of grip.
+In case you want to uninstall the mod, simply remove the `openvr_api.dll` file again
+and rename the original `openvr_api.orig.dll` back to `openvr_api.dll`.
 
-Save the bindings. You should be good to go.
+In case you run into issues, the log file (`openvr_mod.log`) may provide clues to
+what's going on.
+
+Example results:
+- https://imgsli.com/NTk1OTI/2/1
 
 
 OpenVR SDK
