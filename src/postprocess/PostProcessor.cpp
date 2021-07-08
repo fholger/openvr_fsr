@@ -50,12 +50,21 @@ namespace vr {
 		ID3D11Texture2D *texture = (ID3D11Texture2D*)pTexture->handle;
 
 		if ( Config::Instance().fsrEnabled ) {
+			if (initialized) {
+				D3D11_TEXTURE2D_DESC td;
+				texture->GetDesc(&td);
+				if (td.Width != inputWidth || td.Height != inputHeight) {
+					Log() << "Texture size changed, recreating resources...\n";
+					Reset();
+				}
+			}
 			if (!initialized) {
 				try {
 					PrepareResources(texture, pTexture->eColorSpace);
 				} catch (...) {
 					Log() << "Resource creation failed, disabling\n";
 					enabled = false;
+					return;
 				}
 			}
 
