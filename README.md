@@ -4,7 +4,27 @@ Modified OpenVR DLL with AMD FidelityFX SuperResolution Upscaler
 This modified openvr_api.dll allows you to apply [FidelityFX SuperResolution](https://gpuopen.com/fidelityfx-superresolution/)
 upscaling to many SteamVR games, as long as they use D3D11.
 
-To install, find the location of the openvr_api.dll in the game's installation
+### About FidelityFX Super Resolution
+
+FidelityFX Super Resolution (FSR for short) is an upscaling technique developed by AMD,
+but it works on pretty much any graphics card, including NVIDIA cards. The idea is that
+the game internally renders to a lower resolution, thus saving GPU time and reaching higher
+FPS, as long as it is not bottlenecked by the CPU. The resulting lower resolution render is
+then upscaled to the target resolution by FSR, with the aim of restoring some of the lost
+detail due to the lower resolution rendering. It does so in two steps - the first being
+the actual upscaling to the target resolution, where particular attention is paid to edges
+in the lower resolution picture. The second step is a sharpening step to counter some of the
+blur introduced by the upscaling.
+
+Note that, unlike DLSS, FSR is *not* an anti-aliasing solution. Any aliasing and shimmering
+edges present in the original image will not be fixed by FSR. As such, the final image quality
+of FSR depends a lot on the particular game you are using it with.
+
+### Installation instructions
+
+First, download the `openvr_fsr.zip` file from the [latest release](https://github.com/fholger/openvr_fsr/releases/latest) under "Assets".
+
+Then find the location of the openvr_api.dll in the game's installation
 folder: 
 - It might be located right next to the main executable (e.g. Skyrim, FO4).
 - For Unity games, look in: `<GameDir>\<Game>_Data\Plugins`
@@ -20,6 +40,38 @@ and rename the original `openvr_api.orig.dll` back to `openvr_api.dll`.
 
 In case you run into issues, the log file (`openvr_mod.log`) may provide clues to
 what's going on.
+
+### Configuration
+
+The mod is configured by editing the values in its config file, `openvr_mod.cfg`. The
+most important setting is `renderScale`, which determines the lowered render resolution that
+the game will be using internally. If you have set a render resolution of e.g. 2244x2492 in
+SteamVR, then that's the target resolution. The internal resolution will be scaled by the value
+of `renderScale` in both dimensions. For example, if `renderScale` is set to 0.75, then the
+actual render resolution will become 1683x1869. The render is then upscaled by FSR to the
+original resolution of 2244x2492.
+
+If you set a value higher than 1 for `renderScale`, then the game will render at the native
+resolution, i.e. the one configured in SteamVR. But FSR will then take this render and upscale
+it to a resolution multiplied by the value of `renderScale` in each dimension. For example, if
+the resolution in SteamVR is 2242x2492 and you have configured a value of 1.3 for `renderScale`,
+then the game will render at 2242x2492, but the image will be upscaled by FSR to 2915x3240.
+
+The second relevant parameter is `sharpness`. Generally, the higher you set `sharpness`, the
+sharper the final image will appear. You probably want to set this value higher if you lower
+`renderScale`, but beware of over-sharpening.
+
+### Performance considerations
+
+While rendering at a lower resolution will save you performance (which is the entire point),
+the FSR upscaler does have a fixed cost in GPU time, and this time depends on your GPU and
+the target resolution (*not* the render resolution). So the higher your target resolution, the
+higher the cost of the FSR upscaler. In time, we might be able to improve this cost with some
+clever tricks, but for now keep this in mind. It means that, the higher your target resolution,
+the lower you may have to set the render resolution (by lowering `renderScale`) before you see
+an actual net benefit for your GPU times.
+
+### Results
 
 Example results:
 - [Skyrim VR](https://imgsli.com/NjAxNTM/0/1)
