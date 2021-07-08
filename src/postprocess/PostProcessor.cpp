@@ -47,6 +47,11 @@ namespace vr {
 			return;
 		}
 
+		static VRTextureBounds_t defaultBounds { 0, 0, 1, 1 };
+		if (pBounds == nullptr) {
+			pBounds = &defaultBounds;
+		}
+
 		ID3D11Texture2D *texture = (ID3D11Texture2D*)pTexture->handle;
 
 		if ( Config::Instance().fsrEnabled ) {
@@ -68,8 +73,9 @@ namespace vr {
 				}
 			}
 
-			// if a single texture is used for both eyes, only apply effects on the first Submit
-			if (eyeCount == 0 || texture != lastSubmittedTexture) {
+			bool textureContainsOnlyOneEye = std::abs(pBounds->uMax - pBounds->uMin) > .5f;
+			// if a single shared texture is used for both eyes, only apply effects on the first Submit
+			if (eyeCount == 0 || textureContainsOnlyOneEye || texture != lastSubmittedTexture) {
 				ApplyPostProcess(texture);
 			}
 			lastSubmittedTexture = texture;
