@@ -43,7 +43,7 @@ namespace vr {
 	}
 
 	void PostProcessor::Apply(EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t* pBounds, EVRSubmitFlags nSubmitFlags) {
-		if (!enabled || pTexture->eType != TextureType_DirectX) {
+		if (!enabled || pTexture->eType != TextureType_DirectX || pTexture->handle == nullptr) {
 			return;
 		}
 
@@ -318,7 +318,16 @@ namespace vr {
 	}
 
 	void PostProcessor::ApplyPostProcess( ID3D11Texture2D *inputTexture ) {
+		ID3D11Buffer* currentConstBuffs[1];
+		ID3D11ShaderResourceView* currentSRVs[1];
+		ID3D11UnorderedAccessView* currentUAVs[1];
+
+		context->CSGetShaderResources(0, 1, currentSRVs);
+		context->CSGetUnorderedAccessViews(0, 1, currentUAVs);
+		context->CSGetConstantBuffers(0, 1, currentConstBuffs);
+
 		outputTexture = inputTexture;
+
 		ID3D11ShaderResourceView *inputView = GetInputView(inputTexture);
 		if (inputView == nullptr) {
 			return;
@@ -336,10 +345,9 @@ namespace vr {
 			outputTexture = sharpenedTexture.Get();
 		}
 
-		ID3D11ShaderResourceView *nullSRVs[1] = {nullptr};
-		context->CSSetShaderResources(0, 1, nullSRVs);
-		ID3D11UnorderedAccessView *nullUAVs[1] = {nullptr};
+		context->CSSetShaderResources(0, 1, currentSRVs);
 		UINT uavCount = -1;
-		context->CSSetUnorderedAccessViews(0, 1, nullUAVs, &uavCount);
+		context->CSSetUnorderedAccessViews(0, 1, currentUAVs, &uavCount);
+		context->CSSetConstantBuffers(0, 1, currentConstBuffs);
 	}
 }
