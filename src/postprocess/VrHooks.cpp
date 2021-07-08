@@ -40,17 +40,43 @@ namespace {
 		//Log() << "Recommended render target size: " << *pnWidth << "x" << *pnHeight << "\n";
 	}
 
-	vr::EVRCompositorError IVRCompositor012_Submit(vr::IVRCompositor *self, vr::EVREye eEye, const vr::Texture_t *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
+	vr::EVRCompositorError IVRCompositor_Submit(vr::IVRCompositor *self, vr::EVREye eEye, const vr::Texture_t *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
 		void *origHandle = pTexture->handle;
 
 		postProcessor.Apply(eEye, pTexture, pBounds, nSubmitFlags);
-		vr::EVRCompositorError error = CallOriginal(IVRCompositor012_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
+		vr::EVRCompositorError error = CallOriginal(IVRCompositor_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
 		if (error != vr::VRCompositorError_None) {
 			Log() << "Error when submitting for eye " << eEye << ": " << error << std::endl;
 		}
 
 		const_cast<vr::Texture_t*>(pTexture)->handle = origHandle;
 		return error;
+	}
+
+	vr::EVRCompositorError IVRCompositor_Submit_008(vr::IVRCompositor *self, vr::EVREye eEye, unsigned int eTextureType, void *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
+		if (eTextureType == 0) {
+			// texture type is DirectX
+			vr::Texture_t texture;
+			texture.eType = vr::TextureType_DirectX;
+			texture.eColorSpace = vr::ColorSpace_Auto;
+			texture.handle = pTexture;
+			postProcessor.Apply(eEye, &texture, pBounds, nSubmitFlags);
+			pTexture = texture.handle;
+		}
+		return CallOriginal(IVRCompositor_Submit_008)(self, eEye, eTextureType, pTexture, pBounds, nSubmitFlags);
+	}
+
+	vr::EVRCompositorError IVRCompositor_Submit_007(vr::IVRCompositor *self, vr::EVREye eEye, unsigned int eTextureType, void *pTexture, const vr::VRTextureBounds_t *pBounds) {
+		if (eTextureType == 0) {
+			// texture type is DirectX
+			vr::Texture_t texture;
+			texture.eType = vr::TextureType_DirectX;
+			texture.eColorSpace = vr::ColorSpace_Auto;
+			texture.handle = pTexture;
+			postProcessor.Apply(eEye, &texture, pBounds, vr::Submit_Default);
+			pTexture = texture.handle;
+		}
+		return CallOriginal(IVRCompositor_Submit_007)(self, eEye, eTextureType, pTexture, pBounds);
 	}
 }
 
@@ -96,12 +122,20 @@ void HookVRInterface(const char *version, void *instance) {
 	unsigned int compositor_version = 0;
 	if (!ivrCompositorHooked && std::sscanf(version, "IVRCompositor_%u", &compositor_version))
 	{
-		// The 'IVRCompositor::Submit' function definition has been stable and has had the same virtual function
-		// table index since the OpenVR 1.0 release (which was at 'IVRCompositor_015')
-		if (compositor_version >= 12) {
+		if (compositor_version >= 9) {
+		Log() << "Injecting Submit into " << version << std::endl;
+			uint32_t methodPos = compositor_version >= 12 ? 5 : 4;
+			InstallVirtualFunctionHook(instance, methodPos, IVRCompositor_Submit);
+			ivrCompositorHooked = true;
+		}
+		else if (compositor_version == 8) {
 			Log() << "Injecting Submit into " << version << std::endl;
-			InstallVirtualFunctionHook(instance, 5, IVRCompositor012_Submit);
-
+			InstallVirtualFunctionHook(instance, 6, IVRCompositor_Submit_008);
+			ivrCompositorHooked = true;
+		}
+		else if (compositor_version == 7) {
+			Log() << "Injecting Submit into " << version << std::endl;
+			InstallVirtualFunctionHook(instance, 6, IVRCompositor_Submit_007);
 			ivrCompositorHooked = true;
 		}
 	}

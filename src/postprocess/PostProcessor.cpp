@@ -43,7 +43,7 @@ namespace vr {
 	}
 
 	void PostProcessor::Apply(EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t* pBounds, EVRSubmitFlags nSubmitFlags) {
-		if (!enabled || pTexture->eType != TextureType_DirectX || pTexture->handle == nullptr) {
+		if (!enabled || pTexture == nullptr || pTexture->eType != TextureType_DirectX || pTexture->handle == nullptr) {
 			return;
 		}
 
