@@ -12,6 +12,7 @@
 #include <mutex>
 
 #include "VrHooks.h"
+#undef interface
 
 //using vr::EVRInitError;
 using vr::IVRSystem;

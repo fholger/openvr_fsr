@@ -7,6 +7,7 @@ std::string GetDllPath();
 
 struct Config {
 	bool fsrEnabled = false;
+	bool applyMIPBias = true;
 	float renderScale = 1.f;
 	float sharpness = 0.75f;
 
@@ -22,6 +23,7 @@ struct Config {
 				config.sharpness = fsr.get("sharpness", 1.0).asFloat();
 				if (config.sharpness < 0) config.sharpness = 0;
 				config.renderScale = fsr.get("renderScale", 1.0).asFloat();
+				config.applyMIPBias = fsr.get("applyMIPBias", true).asBool();
 			}
 		} catch (...) {
 			Log() << "Could not read config file.\n";

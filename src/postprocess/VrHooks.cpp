@@ -5,12 +5,16 @@
 #include <openvr.h>
 #include <MinHook.h>
 #include <unordered_map>
+#include <unordered_set>
 
 
 namespace {
 	std::unordered_map<void*, void*> hooksToOriginal;
 	bool ivrSystemHooked = false;
 	bool ivrCompositorHooked = false;
+	ID3D11DeviceContext *hookedContext = nullptr;
+	ID3D11Device *device = nullptr;
+	float mipLodBias;
 
 	vr::PostProcessor postProcessor;
 
@@ -78,6 +82,33 @@ namespace {
 		}
 		return CallOriginal(IVRCompositor_Submit_007)(self, eEye, eTextureType, pTexture, pBounds);
 	}
+
+	using Microsoft::WRL::ComPtr;
+	std::unordered_set<ID3D11SamplerState*> passThroughSamplers;
+	std::unordered_map<ID3D11SamplerState*, ComPtr<ID3D11SamplerState>> mappedSamplers;
+
+	void D3D11Context_PSSetSamplers(ID3D11DeviceContext *self, UINT StartSlot, UINT NumSamplers, ID3D11SamplerState * const *ppSamplers) {
+		static ID3D11SamplerState *samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
+		for (UINT i = 0; i < NumSamplers; ++i) {
+			ID3D11SamplerState *orig = ppSamplers[i];
+			samplers[i] = orig;
+
+			if (orig == nullptr || passThroughSamplers.find(orig) != passThroughSamplers.end())
+				continue;
+
+			if (mappedSamplers.find(orig) == mappedSamplers.end()) {
+				Log() << "Creating replacement sampler for " << orig << " with MIP LOD bias " << mipLodBias << std::endl;
+				D3D11_SAMPLER_DESC sd;
+				orig->GetDesc(&sd);
+				sd.MipLODBias += mipLodBias;
+				device->CreateSamplerState(&sd, mappedSamplers[orig].GetAddressOf());
+				passThroughSamplers.insert(mappedSamplers[orig].Get());
+			}
+
+			samplers[i] = mappedSamplers[orig].Get();
+		}
+		CallOriginal(D3D11Context_PSSetSamplers)(self, StartSlot, NumSamplers, samplers);
+	}
 }
 
 void InitHooks() {
@@ -91,6 +122,11 @@ void ShutdownHooks() {
 	hooksToOriginal.clear();
 	ivrSystemHooked = false;
 	ivrCompositorHooked = false;
+	hookedContext = nullptr;
+	device = nullptr;
+	mipLodBias = 0;
+	passThroughSamplers.clear();
+	mappedSamplers.clear();
 	postProcessor.Reset();
 }
 
@@ -138,5 +174,17 @@ void HookVRInterface(const char *version, void *instance) {
 			InstallVirtualFunctionHook(instance, 6, IVRCompositor_Submit_007);
 			ivrCompositorHooked = true;
 		}
+	}
+}
+
+void HookD3D11Context( ID3D11DeviceContext *context, ID3D11Device *pDevice, float bias ) {
+	device = pDevice;
+	mipLodBias = bias;
+	mappedSamplers.clear();
+	passThroughSamplers.clear();
+	if (context != hookedContext) {
+		Log() << "Injecting PSSetSamplers into D3D11DeviceContext" << std::endl;
+		InstallVirtualFunctionHook(context, 10, D3D11Context_PSSetSamplers);
+		hookedContext = context;
 	}
 }

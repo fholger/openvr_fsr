@@ -9,6 +9,7 @@
 #include "Config.h"
 #include "shader_fsr_easu.h"
 #include "shader_fsr_rcas.h"
+#include "VrHooks.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -285,6 +286,7 @@ namespace vr {
 		context->CSSetConstantBuffers( 0, 1, sharpenConstantsBuffer.GetAddressOf() );
 		ID3D11ShaderResourceView *srvs[1] = {inputView};
 		context->CSSetShaderResources( 0, 1, srvs );
+		context->CSSetSamplers( 0, 1, sampler.GetAddressOf() );
 		context->CSSetShader( rCASShader.Get(), nullptr, 0 );
 		context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
 	}
@@ -322,6 +324,11 @@ namespace vr {
 				PrepareUpscalingResources();
 			}
 			PrepareSharpeningResources();
+
+			if (Config::Instance().applyMIPBias) {
+				float mipLodBias = -log2(outputWidth / (float)inputWidth);
+				HookD3D11Context(context.Get(), device.Get(), mipLodBias);
+			}
 		}
 
 		initialized = true;
