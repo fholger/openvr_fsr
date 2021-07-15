@@ -3,9 +3,12 @@
 #define no_init_all deprecated
 #include <d3d11.h>
 #include <wrl/client.h>
-#include "fsr/fsr_up.h"
-#include "fsr/fsr_cas.h"
+#define A_CPU
+#include "fsr/ffx_a.h"
+#include "fsr/ffx_fsr1.h"
 #include "Config.h"
+#include "shader_fsr_easu.h"
+#include "shader_fsr_rcas.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -169,26 +172,18 @@ namespace vr {
 	}
 
 	struct UpscaleConstants {
-		float targetWidth;
-		float targetHeight;
-		float invTargetWidth;
-		float invTargetHeight;
-		float sourceWidth;
-		float sourceHeight;
-		float padding[2];
+		AU1 const0[4];
+		AU1 const1[4];
+		AU1 const2[4];
+		AU1 const3[4];
 	};
 	
 	void PostProcessor::PrepareUpscalingResources() {
-		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( fsr_up_dxbc, fsr_up_dxbc_len, nullptr, upscaleShader.GetAddressOf()));
+		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
 
 		UpscaleConstants constants;
 		// create shader constants buffers
-		constants.targetWidth = outputWidth;
-		constants.targetHeight = outputHeight;
-		constants.invTargetWidth = 1.f / outputWidth;
-		constants.invTargetHeight = 1.f / outputHeight;
-		constants.sourceWidth = inputWidth;
-		constants.sourceHeight = inputHeight;
+		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -241,15 +236,15 @@ namespace vr {
 	}
 
 	struct SharpenConstants {
-		float sharpness;
-		float padding[3];
+		AU1 const0[4];
 	};
 
 	void PostProcessor::PrepareSharpeningResources() {
-		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( fsr_cas_dxbc, fsr_cas_dxbc_len, nullptr, rCASShader.GetAddressOf()));
+		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
 		SharpenConstants constants;
-		constants.sharpness = -std::log2(Config::Instance().sharpness);
+		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
+		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;

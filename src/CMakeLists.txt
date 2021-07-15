@@ -54,8 +54,10 @@ set(POSTPROCESS_FILES
 	postprocess/PostProcessor.cpp
 )
 set(FSR_FILES
-	fsr/fsr_up.h
-	fsr/fsr_cas.h
+	fsr/ffx_a.h
+	fsr/ffx_fsr1.h
+	fsr/fsr_easu.hlsl
+	fsr/fsr_rcas.hlsl
 )
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(MINHOOK_HDE minhook/src/hde/hde64.c)
@@ -136,6 +138,15 @@ endif()
 if(USE_CUSTOM_LIBCXX)
 	set(EXTRA_LIBS ${EXTRA_LIBS} c++ c++abi)
 endif()
+
+set_property(SOURCE fsr/fsr_easu.hlsl PROPERTY VS_SHADER_TYPE Compute)
+set_property(SOURCE fsr/fsr_easu.hlsl PROPERTY VS_SHADER_MODEL "5.0")
+set_property(SOURCE fsr/fsr_easu.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_fsr_easu.h")
+set_property(SOURCE fsr/fsr_easu.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_FSRUpscaleShader")
+set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_TYPE Compute)
+set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_MODEL "5.0")
+set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_fsr_rcas.h")
+set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_FSRSharpenShader")
 
 target_link_libraries(${LIBNAME} ${EXTRA_LIBS} ${CMAKE_DL_LIBS})
 target_include_directories(${LIBNAME} PUBLIC ${OPENVR_HEADER_DIR})
