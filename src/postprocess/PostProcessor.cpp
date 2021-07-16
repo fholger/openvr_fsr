@@ -43,7 +43,20 @@ namespace vr {
 	}
 
 	bool IsSrgbFormat(DXGI_FORMAT format) {
-		return format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB || format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		switch (format) {
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+			return true;
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+			// OpenVR appears to treat submitted typeless textures as SRGB
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	void PostProcessor::Apply(EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t* pBounds, EVRSubmitFlags nSubmitFlags) {
@@ -85,6 +98,7 @@ namespace vr {
 			lastSubmittedTexture = texture;
 			eyeCount = (eyeCount + 1) % 2;
 			const_cast<Texture_t*>(pTexture)->handle = outputTexture;
+			const_cast<Texture_t*>(pTexture)->eColorSpace = inputIsSrgb ? ColorSpace_Gamma : ColorSpace_Auto;
 		}
 	}
 
@@ -156,7 +170,7 @@ namespace vr {
 			// create resource view for input texture
 			D3D11_TEXTURE2D_DESC std;
 			inputTexture->GetDesc( &std );
-			Log() << "Texture has size " << std.Width << "x" << std.Height << "\n";
+			Log() << "Texture has size " << std.Width << "x" << std.Height << " and format " << std.Format << "\n";
 			D3D11_SHADER_RESOURCE_VIEW_DESC svd;
 			svd.Format = TranslateTypelessFormats(std.Format);
 			svd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
