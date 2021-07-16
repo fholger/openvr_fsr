@@ -93,13 +93,30 @@ namespace {
 			ID3D11SamplerState *orig = ppSamplers[i];
 			samplers[i] = orig;
 
-			if (orig == nullptr || passThroughSamplers.find(orig) != passThroughSamplers.end())
+			if (passThroughSamplers.find(orig) != passThroughSamplers.end())
 				continue;
 
 			if (mappedSamplers.find(orig) == mappedSamplers.end()) {
 				Log() << "Creating replacement sampler for " << orig << " with MIP LOD bias " << mipLodBias << std::endl;
 				D3D11_SAMPLER_DESC sd;
-				orig->GetDesc(&sd);
+				if (orig != nullptr) {
+					orig->GetDesc(&sd);
+				} else {
+					// create default sampler state
+					sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+					sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+					sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+					sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+					sd.MipLODBias = 0;
+					sd.MaxAnisotropy = 1;
+					sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+					sd.BorderColor[0] = 1.f;
+					sd.BorderColor[1] = 1.f;
+					sd.BorderColor[2] = 1.f;
+					sd.BorderColor[3] = 1.f;
+					sd.MinLOD = -FLT_MAX;
+					sd.MaxLOD = FLT_MAX;
+				}
 				sd.MipLODBias += mipLodBias;
 				device->CreateSamplerState(&sd, mappedSamplers[orig].GetAddressOf());
 				passThroughSamplers.insert(mappedSamplers[orig].Get());
