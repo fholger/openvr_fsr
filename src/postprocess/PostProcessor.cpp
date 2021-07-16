@@ -22,7 +22,6 @@ namespace vr {
 	}
 	
 	DXGI_FORMAT TranslateTypelessFormats(DXGI_FORMAT format) {
-		Log() << "Mapping format " << std::hex << format << std::dec << std::endl;
 		switch (format) {
 		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -82,6 +81,7 @@ namespace vr {
 			}
 			if (!initialized) {
 				try {
+					textureContainsOnlyOneEye = std::abs(pBounds->uMax - pBounds->uMin) > .5f;
 					PrepareResources(texture, pTexture->eColorSpace);
 				} catch (...) {
 					Log() << "Resource creation failed, disabling\n";
@@ -90,7 +90,6 @@ namespace vr {
 				}
 			}
 
-			bool textureContainsOnlyOneEye = std::abs(pBounds->uMax - pBounds->uMin) > .5f;
 			// if a single shared texture is used for both eyes, only apply effects on the first Submit
 			if (eyeCount == 0 || textureContainsOnlyOneEye || texture != lastSubmittedTexture) {
 				ApplyPostProcess(texture);
@@ -191,6 +190,8 @@ namespace vr {
 		AU1 const1[4];
 		AU1 const2[4];
 		AU1 const3[4];
+		AU1 imageCentre[4];
+		AU1 radius[4];
 	};
 	
 	void PostProcessor::PrepareUpscalingResources() {
@@ -199,6 +200,13 @@ namespace vr {
 		UpscaleConstants constants;
 		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
+		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
+		constants.radius[1] = constants.radius[0] * constants.radius[0];
+		constants.radius[2] = outputWidth;
+		constants.radius[3] = outputHeight;
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -252,6 +260,8 @@ namespace vr {
 
 	struct SharpenConstants {
 		AU1 const0[4];
+		AU1 imageCentre[4];
+		AU1 radius[4];
 	};
 
 	void PostProcessor::PrepareSharpeningResources() {
@@ -260,6 +270,13 @@ namespace vr {
 		SharpenConstants constants;
 		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
+		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
+		constants.radius[1] = constants.radius[0] * constants.radius[0];
+		constants.radius[2] = outputWidth;
+		constants.radius[3] = outputHeight;
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;

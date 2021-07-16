@@ -19,6 +19,7 @@ namespace vr {
 		uint32_t inputHeight = 0;
 		uint32_t outputWidth = 0;
 		uint32_t outputHeight = 0;
+		bool textureContainsOnlyOneEye = true;
 		bool requiresCopy = false;
 		bool inputIsSrgb = false;
 		ComPtr<ID3D11Device> device;

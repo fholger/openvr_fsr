@@ -10,6 +10,7 @@ struct Config {
 	bool applyMIPBias = true;
 	float renderScale = 1.f;
 	float sharpness = 0.75f;
+	float radius = 0.5f;
 
 	static Config Load() {
 		Config config;
@@ -24,6 +25,7 @@ struct Config {
 				if (config.sharpness < 0) config.sharpness = 0;
 				config.renderScale = fsr.get("renderScale", 1.0).asFloat();
 				config.applyMIPBias = fsr.get("applyMIPBias", true).asBool();
+				config.radius = fsr.get("radius", 0.5).asFloat();
 			}
 		} catch (...) {
 			Log() << "Could not read config file.\n";
