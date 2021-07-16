@@ -328,6 +328,11 @@ namespace vr {
 			if (Config::Instance().applyMIPBias) {
 				float mipLodBias = -log2(outputWidth / (float)inputWidth);
 				HookD3D11Context(context.Get(), device.Get(), mipLodBias);
+				// ensure that all currently set samplers get LOD bias applied, even if the engine
+				// never changes them again
+				ID3D11SamplerState *samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
+				context->PSGetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, samplers);
+				context->PSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, samplers);
 			}
 		}
 
