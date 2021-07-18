@@ -16,9 +16,16 @@ the actual upscaling to the target resolution, where particular attention is pai
 in the lower resolution picture. The second step is a sharpening step to counter some of the
 blur introduced by the upscaling.
 
+### Notes about image quality
+
 Note that, unlike DLSS, FSR is *not* an anti-aliasing solution. Any aliasing and shimmering
 edges present in the original image will not be fixed by FSR. As such, the final image quality
-of FSR depends a lot on the particular game you are using it with.
+of FSR depends a lot on the particular game you are using it with. *AMD specifically advises
+that FSR should be used in conjunction with the highest-quality anti-aliasing setting a game
+has to offer.* In the case of VR games, that means enabling MSAA if it is available, or
+else TAA. You may also want to experiment with turning off any sort of post-processing effects
+in the games, as some of these should ideally run after FSR, but with this plugin will run
+before it and so may negatively affect the image quality.
 
 ### Installation instructions
 
@@ -59,17 +66,26 @@ then the game will render at 2242x2492, but the image will be upscaled by FSR to
 
 The second relevant parameter is `sharpness`. Generally, the higher you set `sharpness`, the
 sharper the final image will appear. You probably want to set this value higher if you lower
-`renderScale`, but beware of over-sharpening.
+`renderScale`, but beware of over-sharpening. The default of 0.9 gives a fairly sharp result.
+You can increase it up to 1.0 if you like an even sharper image. But if the image is too
+sharp for your taste, consider experimenting with lower values.
 
 ### Performance considerations
 
 While rendering at a lower resolution will save you performance (which is the entire point),
 the FSR upscaler does have a fixed cost in GPU time, and this time depends on your GPU and
 the target resolution (*not* the render resolution). So the higher your target resolution, the
-higher the cost of the FSR upscaler. In time, we might be able to improve this cost with some
-clever tricks, but for now keep this in mind. It means that, the higher your target resolution,
+higher the cost of the FSR upscaler. It means that, the higher your target resolution,
 the lower you may have to set the render resolution (by lowering `renderScale`) before you see
 an actual net benefit for your GPU times.
+
+A part of the overhead of FSR can be mitigated by using a sort of "fixed foveated" optimization
+where only the center of the image is upscaled by the more expensive FSR algorithm, while the
+edges are upscaled by cheaper bilinear sampling. This can be controlled in the mod by the
+`radius` setting, where anything within the radius from the center of the image is upscaled
+with FSR, and anything outside is upscaled with bilinear filtering. Due to the natural loss
+of clarity in the edges of current HMD lenses, even with a fairly small radius you will
+probably have a hard time to tell the difference.
 
 ### Results
 
@@ -93,7 +109,6 @@ I intend to keep working on the performance, quality and compatibility of this m
 ### Known issues
 
 - Half Life: Alyx and Star Wars: Squadrons do not work, because they don't like you replacing their openvr_dll.api.
-- In rare cases, the rendering output may appear unnaturally dark when this mod is active. This is an issue with color space that I hope to be able to fix in a future release.
 - Please report any other game that isn't working, assuming that it is a SteamVR game and uses D3D11 for rendering.
 
 
