@@ -94,6 +94,13 @@ Example results:
 - [Fallout 4 VR Native vs FSR modes](https://imgsli.com/NjAxNTE/0/1)
 - [Fallout 4 VR Native vs FSR upsampling vs CAS sharpening](https://imgsli.com/NTk1OTI/2/1)
 
+### Troubleshooting
+
+- If you encounter issues like the view looking misaligned or mismatched between the eyes, or one eye is sharper
+  than the other, try setting `radius` to `2` in the config and check if that fixes it. This will disable a
+  performance optimization, but it doesn't always work with all games or headsets.
+- If you encounter missing textures or banding, try setting `applyMIPBias` to `false` in the config.
+
 ### Important disclaimer
 
 This is a best-effort experiment and hack to bring this upscaling technique to VR games
