@@ -191,9 +191,6 @@ void *VR_GetGenericInterface(const char *pchInterfaceVersion, EVRInitError *peEr
 		return NULL;
 	}
 
-	void *interface = g_pHmdSystem->GetGenericInterface(pchInterfaceVersion, peError);
-	HookVRInterface(pchInterfaceVersion, interface);
-
 	// if C interfaces were requested, make sure that we also request the underlying
 	// C++ interfaces so that our hooks get installed.
 	std::string interfaceName (pchInterfaceVersion);
@@ -201,6 +198,9 @@ void *VR_GetGenericInterface(const char *pchInterfaceVersion, EVRInitError *peEr
 		// C interfaces have names "FnTable:IVRxxx", so strip the "FnTable:"
 		VR_GetGenericInterface(interfaceName.substr(8).c_str(), nullptr);
 	}
+
+	void *interface = g_pHmdSystem->GetGenericInterface(pchInterfaceVersion, peError);
+	HookVRInterface(pchInterfaceVersion, interface);
 
 	return interface;
 }
