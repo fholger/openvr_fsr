@@ -38,8 +38,10 @@ namespace {
 		CallOriginal(IVRSystem_GetRecommendedRenderTargetSize)(self, pnWidth, pnHeight);
 
 		if (Config::Instance().fsrEnabled && Config::Instance().renderScale < 1) {
-			*pnWidth *= Config::Instance().renderScale;
-			*pnHeight *= Config::Instance().renderScale;
+			if (pnWidth)
+				*pnWidth *= Config::Instance().renderScale;
+			if (pnHeight)
+				*pnHeight *= Config::Instance().renderScale;
 		}
 		//Log() << "Recommended render target size: " << *pnWidth << "x" << *pnHeight << "\n";
 	}
