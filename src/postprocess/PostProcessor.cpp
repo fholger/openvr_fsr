@@ -41,7 +41,20 @@ namespace vr {
 		}
 	}
 
-	bool IsSrgbFormat(DXGI_FORMAT format) {
+	DXGI_FORMAT MakeSrgbFormatsTypeless(DXGI_FORMAT format) {
+		switch (format) {
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+			return DXGI_FORMAT_B8G8R8X8_TYPELESS;
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+		default:
+			return format;
+		}
+	}
+
+	bool IsConsideredSrgbByOpenVR(DXGI_FORMAT format) {
 		switch (format) {
 		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
@@ -52,6 +65,17 @@ namespace vr {
 		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
 		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
 			// OpenVR appears to treat submitted typeless textures as SRGB
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	bool IsSrgbFormat(DXGI_FORMAT format) {
+		switch (format) {
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
 			return true;
 		default:
 			return false;
@@ -133,14 +157,14 @@ namespace vr {
 		td.CPUAccessFlags = 0;
 		td.Usage = D3D11_USAGE_DEFAULT;
 		td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		td.Format = format;
+		td.Format = MakeSrgbFormatsTypeless(format);
 		td.MiscFlags = 0;
 		td.SampleDesc.Count = 1;
 		td.SampleDesc.Quality = 0;
 		td.ArraySize = 1;
 		CheckResult("Creating copy texture", device->CreateTexture2D( &td, nullptr, copiedTexture.GetAddressOf()));
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv;
-		srv.Format = TranslateTypelessFormats(format);
+		srv.Format = TranslateTypelessFormats(td.Format);
 		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MipLevels = 1;
 		srv.Texture2D.MostDetailedMip = 0;
@@ -328,7 +352,7 @@ namespace vr {
 		device->GetImmediateContext( context.GetAddressOf() );
 		D3D11_TEXTURE2D_DESC std;
 		inputTexture->GetDesc( &std );
-		inputIsSrgb = colorSpace == ColorSpace_Gamma || (colorSpace == ColorSpace_Auto && IsSrgbFormat(std.Format));
+		inputIsSrgb = colorSpace == ColorSpace_Gamma || (colorSpace == ColorSpace_Auto && IsConsideredSrgbByOpenVR(std.Format));
 		if (inputIsSrgb) {
 			Log() << "Input texture is in SRGB color space\n";
 		}
@@ -344,8 +368,8 @@ namespace vr {
 			outputHeight = std.Height * Config::Instance().renderScale;
 		}
 
-		if (!(std.BindFlags & D3D11_BIND_SHADER_RESOURCE) || std.SampleDesc.Count > 1) {
-			Log() << "Input texture can't be bound, need to copy\n";
+		if (!(std.BindFlags & D3D11_BIND_SHADER_RESOURCE) || std.SampleDesc.Count > 1 || IsSrgbFormat(std.Format)) {
+			Log() << "Input texture can't be bound directly, need to copy\n";
 			requiresCopy = true;
 			PrepareCopyResources(std.Format);
 		}
