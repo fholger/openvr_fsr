@@ -37,13 +37,14 @@ namespace {
 	void IVRSystem_GetRecommendedRenderTargetSize(vr::IVRSystem *self, uint32_t *pnWidth, uint32_t *pnHeight) {
 		CallOriginal(IVRSystem_GetRecommendedRenderTargetSize)(self, pnWidth, pnHeight);
 
-		if (Config::Instance().fsrEnabled && Config::Instance().renderScale < 1) {
-			if (pnWidth)
-				*pnWidth *= Config::Instance().renderScale;
-			if (pnHeight)
-				*pnHeight *= Config::Instance().renderScale;
+		if (pnWidth == nullptr || pnHeight == nullptr) {
+			return;
 		}
-		//Log() << "Recommended render target size: " << *pnWidth << "x" << *pnHeight << "\n";
+
+		if (Config::Instance().fsrEnabled && Config::Instance().renderScale < 1) {
+			*pnWidth *= Config::Instance().renderScale;
+			*pnHeight *= Config::Instance().renderScale;
+		}
 	}
 
 	vr::EVRCompositorError IVRCompositor_Submit(vr::IVRCompositor *self, vr::EVREye eEye, const vr::Texture_t *pTexture, const vr::VRTextureBounds_t *pBounds, vr::EVRSubmitFlags nSubmitFlags) {
