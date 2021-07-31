@@ -31,8 +31,13 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 	// Do remapping of local xy in workgroup for a more PS-like swizzle pattern.
 	AU2 gxy = ARmp8x8(LocalThreadId.x) + AU2(WorkGroupId.x << 4u, WorkGroupId.y << 4u);
 	AU2 groupCentre = AU2((WorkGroupId.x << 4u) + 8u, (WorkGroupId.y << 4u) + 8u);
-	AU2 dc1 = Centre.xy - groupCentre;
-	AU2 dc2 = Centre.zw - groupCentre;
+	// Offsets the radial selection of the workgroups from the center of the displays to the center of the hmd
+	groupCentreEdit = groupCentre.xy;
+	static uint2 groupCentreEdit = 0;
+	groupCentreEdit = groupCentre.xy;
+	groupCentreEdit.x = groupCentreEdit.x * .5;
+	AU2 dc1 = Centre.xy - groupCentreEdit;
+	AU2 dc2 = Centre.zw - (groupCentre / 1.5);
 	if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
 		// only do RCAS for workgroups inside the given radius
 		Sharpen(gxy);
