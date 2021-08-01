@@ -41,7 +41,6 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 	AU2 gxy = ARmp8x8(LocalThreadId.x) + AU2(WorkGroupId.x << 4u, WorkGroupId.y << 4u);
 	AU2 groupCentre = AU2((WorkGroupId.x << 4u) + 8u, (WorkGroupId.y << 4u) + 8u);
 	// Offsets the radial selection of the workgroups from the center of the displays to the center of the hmd
-	groupCentreEdit = groupCentre.xy;
 	static uint2 groupCentreEdit = 0;
 	groupCentreEdit = groupCentre.xy;
 	groupCentreEdit.x = groupCentreEdit.x * .5;

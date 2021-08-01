@@ -285,7 +285,7 @@ namespace vr {
 	struct SharpenConstants {
 		AU1 const0[4];
 		AU1 imageCentre[4];
-		AU1 radius[4];
+		AU1 rcas_radius[4];
 	};
 
 	void PostProcessor::PrepareSharpeningResources() {
@@ -297,10 +297,10 @@ namespace vr {
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
 		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
-		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
-		constants.radius[1] = constants.radius[0] * constants.radius[0];
-		constants.radius[2] = outputWidth;
-		constants.radius[3] = outputHeight;
+		constants.rcas_radius[0] = 0.5f * Config::Instance().rcas_radius * outputHeight;
+		constants.rcas_radius[1] = constants.rcas_radius[0] * constants.rcas_radius[0];
+		constants.rcas_radius[2] = outputWidth;
+		constants.rcas_radius[3] = outputHeight;
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
