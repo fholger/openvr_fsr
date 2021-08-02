@@ -216,6 +216,10 @@ namespace vr {
 		AU1 const3[4];
 		AU1 imageCentre[4];
 		AU1 radius[4];
+		int center_display;
+		int dummy1;
+		int dummy2;
+		int dummy3;
 	};
 	
 	void PostProcessor::PrepareUpscalingResources() {
@@ -224,6 +228,9 @@ namespace vr {
 		UpscaleConstants constants;
 		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
+		constants.dummy1 = 1;
+		constants.dummy2 = 1;
+		constants.dummy3 = 1;
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
 		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
@@ -231,6 +238,16 @@ namespace vr {
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
 		constants.radius[3] = outputHeight;
+  		if (Config::Instance().center_display == true) {
+			int center_display = 1;
+			constants.center_display = center_display; 
+			Log() << "Center Display set to: true\n";
+		} else {
+			int center_display = 0;
+			constants.center_display = center_display; 
+			Log() << "Center Display set to: false\n";
+		} 
+		Log() << "center_display int: " << constants.center_display << "\n"; 
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -242,6 +259,10 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
+		int multiple;
+		multiple = bd.ByteWidth / 16;
+		Log() << "ByteWidth: " << bd.ByteWidth << "  Is multiple: " << multiple << "\n";
+		Log() << "bd: " << &bd << "  init: " << &init << "  UpscaleConstantsBuffer: " << upscaleConstantsBuffer.GetAddressOf() << "\n";
 		CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer.GetAddressOf()));
 
 		Log() << "Creating upscaled texture of size " << outputWidth << "x" << outputHeight << "\n";
@@ -285,22 +306,39 @@ namespace vr {
 	struct SharpenConstants {
 		AU1 const0[4];
 		AU1 imageCentre[4];
-		AU1 rcas_radius[4];
+		AU1 radius[4];
+		int center_display;
+		int dummy1;
+		int dummy2;
+		int dummy3;
+
 	};
 
 	void PostProcessor::PrepareSharpeningResources() {
 		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
 		SharpenConstants constants;
+		constants.dummy1 = 1;
+		constants.dummy2 = 1;
+		constants.dummy3 = 1;
 		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
 		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
-		constants.rcas_radius[0] = 0.5f * Config::Instance().rcas_radius * outputHeight;
-		constants.rcas_radius[1] = constants.rcas_radius[0] * constants.rcas_radius[0];
-		constants.rcas_radius[2] = outputWidth;
-		constants.rcas_radius[3] = outputHeight;
+		constants.radius[0] = 0.5f * Config::Instance().rcas_radius * outputHeight;
+		constants.radius[1] = constants.radius[0] * constants.radius[0];
+		constants.radius[2] = outputWidth;
+		constants.radius[3] = outputHeight;
+		if (Config::Instance().center_display == true) {
+			int center_display = 1;
+			constants.center_display = center_display; 
+			Log() << "Center Display set to: true\n";
+		} else {
+			int center_display = 0;
+			constants.center_display = center_display; 
+			Log() << "Center Display set to: false\n";
+		} 
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -312,6 +350,9 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
+		int is_multiple_of_16;
+		is_multiple_of_16 = bd.ByteWidth / 16;
+		Log() << "RCAS ByteWidth: " << bd.ByteWidth << "  Is multiple: " << is_multiple_of_16 << "\n";
 		CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer.GetAddressOf()));
 		
 		Log() << "Creating sharpened texture of size " << outputWidth << "x" << outputHeight << "\n";

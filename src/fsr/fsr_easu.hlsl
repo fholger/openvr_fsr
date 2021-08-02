@@ -2,9 +2,7 @@
 #define A_HLSL 1
 //#define A_HALF
 #define FSR_EASU_F 1
-
 #include "ffx_a.h"
-
 cbuffer cb : register(b0) {
 	uint4 Const0;
 	uint4 Const1;
@@ -12,6 +10,7 @@ cbuffer cb : register(b0) {
 	uint4 Const3;
 	uint4 Centre;
 	uint4 Radius;
+	int center_display;
 };
 
 SamplerState samLinearClamp : register(s0);
@@ -41,12 +40,60 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 	AU2 gxy = ARmp8x8(LocalThreadId.x) + AU2(WorkGroupId.x << 4u, WorkGroupId.y << 4u);
 	AU2 groupCentre = AU2((WorkGroupId.x << 4u) + 8u, (WorkGroupId.y << 4u) + 8u);
 	// Offsets the radial selection of the workgroups from the center of the displays to the center of the hmd
+	AU2 dc1 = 0;
+	AU2 dc2 = 0;
 	static uint2 groupCentreEdit = 0;
-	groupCentreEdit = groupCentre.xy;
-	groupCentreEdit.x = groupCentreEdit.x * .5;
-	AU2 dc1 = Centre.xy - groupCentreEdit;
-	AU2 dc2 = Centre.zw - (groupCentre / 1.5);
-	if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
+	groupCentreEdit = 0;
+
+	if (center_display == 1) {
+		AU2 dc1 = Centre.xy - groupCentre;
+		AU2 dc2 = Centre.zw - groupCentre;
+ 		if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
+			// only do the expensive EASU for workgroups inside the given radius
+			Upscale(gxy);
+			gxy.x += 8u;
+			Upscale(gxy);
+			gxy.y += 8u;
+			Upscale(gxy);
+			gxy.x -= 8u;
+			Upscale(gxy);
+		} else {
+			// resort to cheaper bilinear sampling
+			Bilinear(gxy);
+			gxy.x += 8u;
+			Bilinear(gxy);
+			gxy.y += 8u;
+			Bilinear(gxy);
+			gxy.x -= 8u;
+			Bilinear(gxy);
+		} 
+	} else {
+		groupCentreEdit = groupCentre.xy;
+		groupCentreEdit.x = groupCentreEdit.x * .5;
+		AU2 dc1 = Centre.xy - groupCentreEdit;
+		AU2 dc2 = Centre.zw - (groupCentre / 1.5);
+ 		if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
+			// only do the expensive EASU for workgroups inside the given radius
+			Upscale(gxy);
+			gxy.x += 8u;
+			Upscale(gxy);
+			gxy.y += 8u;
+			Upscale(gxy);
+			gxy.x -= 8u;
+			Upscale(gxy);
+		} else {
+			// resort to cheaper bilinear sampling
+			Bilinear(gxy);
+			gxy.x += 8u;
+			Bilinear(gxy);
+			gxy.y += 8u;
+			Bilinear(gxy);
+			gxy.x -= 8u;
+			Bilinear(gxy);
+		} 
+	}
+
+/*	if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
 		// only do the expensive EASU for workgroups inside the given radius
 		Upscale(gxy);
 		gxy.x += 8u;
@@ -64,5 +111,5 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 		Bilinear(gxy);
 		gxy.x -= 8u;
 		Bilinear(gxy);
-	}
+	} */
 }

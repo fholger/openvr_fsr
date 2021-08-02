@@ -9,6 +9,7 @@ cbuffer cb : register(b0) {
 	uint4 Const0;
 	uint4 Centre;
 	uint4 Radius;
+	int center_display;
 };
 
 SamplerState samLinearClamp : register(s0);
@@ -31,15 +32,61 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 	// Do remapping of local xy in workgroup for a more PS-like swizzle pattern.
 	AU2 gxy = ARmp8x8(LocalThreadId.x) + AU2(WorkGroupId.x << 4u, WorkGroupId.y << 4u);
 	AU2 groupCentre = AU2((WorkGroupId.x << 4u) + 8u, (WorkGroupId.y << 4u) + 8u);
-	// Offsets the radial selection of the workgroups from the center of the displays to the center of the hmd
+	AU2 dc1 = 0;
+	AU2 dc2 = 0;
 	static uint2 groupCentreEdit = 0;
-	groupCentreEdit = groupCentre.xy;
-	groupCentreEdit.x = groupCentreEdit.x * .5;
-	AU2 dc1 = Centre.xy - groupCentreEdit;
-	AU2 dc2 = Centre.zw - (groupCentre / 1.5);
-	if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
-		// only do RCAS for workgroups inside the given radius
-		Sharpen(gxy);
+	groupCentreEdit = 0;
+	// Applies the radius according to the center_display, true being the center of the display and false being the edges closest to the center of the hmd
+	if (center_display == 1) {
+		AU2 dc1 = Centre.xy - groupCentre;
+		AU2 dc2 = Centre.zw - groupCentre;
+			if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
+			// only do RCAS for workgroups inside the given radius
+			Sharpen(gxy);
+			gxy.x += 8u;
+			Sharpen(gxy);
+			gxy.y += 8u;
+			Sharpen(gxy);
+			gxy.x -= 8u;
+			Sharpen(gxy);
+		} else {
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.x += 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.y += 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.x -= 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+		}
+
+	}else{
+		groupCentreEdit = groupCentre.xy;
+		groupCentreEdit.x = groupCentreEdit.x * .5;
+		AU2 dc1 = Centre.xy - groupCentreEdit;
+		AU2 dc2 = Centre.zw - (groupCentre / 1.5);
+
+		if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {
+			// only do RCAS for workgroups inside the given radius
+			Sharpen(gxy);
+			gxy.x += 8u;
+			Sharpen(gxy);
+			gxy.y += 8u;
+			Sharpen(gxy);
+			gxy.x -= 8u;
+			Sharpen(gxy);
+		} else {
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.x += 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.y += 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+			gxy.x -= 8u;
+			OutputTexture[gxy] = InputTexture[gxy];
+		}
+	}
+/*	if (dot(dc1, dc1) <= Radius.y || dot(dc2, dc2) <= Radius.y) {  
+		// only do RCAS for workgroups inside the given radius			  
+		Sharpen(gxy);													  
 		gxy.x += 8u;
 		Sharpen(gxy);
 		gxy.y += 8u;
@@ -54,5 +101,5 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 		OutputTexture[gxy] = InputTexture[gxy];
 		gxy.x -= 8u;
 		OutputTexture[gxy] = InputTexture[gxy];
-	}
+	} */
 }
