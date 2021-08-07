@@ -222,11 +222,12 @@ namespace vr {
 		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
 
 		UpscaleConstants constants;
+		float calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
 		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
-		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? (outputWidth + calculatedCentreOffset) / 2 : (outputWidth + calculatedCentreOffset) / 4;
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? (outputWidth - calculatedCentreOffset) / 2 : (3 * outputWidth - calculatedCentreOffset) / 4;
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
@@ -292,11 +293,12 @@ namespace vr {
 		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
 		SharpenConstants constants;
+		float calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
 		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
-		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? (outputWidth + calculatedCentreOffset) / 2 : (outputWidth + calculatedCentreOffset) / 4;
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? (outputWidth - calculatedCentreOffset) / 2 : (3 * outputWidth - calculatedCentreOffset) / 4;
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
