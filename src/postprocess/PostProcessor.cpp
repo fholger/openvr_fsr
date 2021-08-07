@@ -222,7 +222,7 @@ namespace vr {
 		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
 
 		UpscaleConstants constants;
-		float calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
+		int calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
 		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
@@ -293,7 +293,7 @@ namespace vr {
 		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
 		SharpenConstants constants;
-		float calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
+		int calculatedCentreOffset = Config::Instance().centreOffset * outputWidth;
 		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
 		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
