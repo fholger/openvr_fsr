@@ -301,6 +301,7 @@ namespace vr {
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
 		constants.radius[3] = outputHeight;
+		constants.const0[3] = Config::Instance().debugMode;
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;

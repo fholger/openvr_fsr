@@ -43,12 +43,13 @@ void main(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID
 		gxy.x -= 8u;
 		Sharpen(gxy);
 	} else {
-		OutputTexture[gxy] = InputTexture[gxy];
+		AF4 mul = AF4(1, 1, 1, 1) - Const0[3] * AF4(0, 0.3, 0.3, 0);
+		OutputTexture[gxy] = mul * InputTexture[gxy];
 		gxy.x += 8u;
-		OutputTexture[gxy] = InputTexture[gxy];
+		OutputTexture[gxy] = mul * InputTexture[gxy];
 		gxy.y += 8u;
-		OutputTexture[gxy] = InputTexture[gxy];
+		OutputTexture[gxy] = mul * InputTexture[gxy];
 		gxy.x -= 8u;
-		OutputTexture[gxy] = InputTexture[gxy];
+		OutputTexture[gxy] = mul * InputTexture[gxy];
 	}
 }
