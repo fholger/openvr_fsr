@@ -59,5 +59,17 @@ namespace vr {
 
 		void PrepareResources(ID3D11Texture2D *inputTexture, EColorSpace colorSpace);
 		void ApplyPostProcess(ID3D11Texture2D *inputTexture);
+
+		struct ProfileQuery {
+			ComPtr<ID3D11Query> queryDisjoint;
+			ComPtr<ID3D11Query> queryStart;
+			ComPtr<ID3D11Query> queryEnd;
+		};
+
+		static const int QUERY_COUNT = 6;
+		ProfileQuery profileQueries[QUERY_COUNT];
+		int currentQuery = 0;
+		float summedGpuTime = 0.0f;
+		int countedQueries = 0;
 	};
 }

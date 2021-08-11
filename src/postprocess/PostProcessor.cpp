@@ -146,6 +146,11 @@ namespace vr {
 		lastSubmittedTexture = nullptr;
 		outputTexture = nullptr;
 		eyeCount = 0;
+		for (int i = 0; i < QUERY_COUNT; ++i) {
+			profileQueries[i].queryStart.Reset();
+			profileQueries[i].queryEnd.Reset();
+			profileQueries[i].queryDisjoint.Reset();
+		}
 	}
 
 	void PostProcessor::PrepareCopyResources( DXGI_FORMAT format ) {
@@ -390,6 +395,18 @@ namespace vr {
 				context->PSGetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, samplers);
 				context->PSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, samplers);
 			}
+
+			if (Config::Instance().debugMode) {
+				for (int i = 0; i < QUERY_COUNT; ++i) {
+					D3D11_QUERY_DESC qd;
+					qd.Query = D3D11_QUERY_TIMESTAMP;
+					qd.MiscFlags = 0;
+					device->CreateQuery(&qd, profileQueries[i].queryStart.GetAddressOf());
+					device->CreateQuery(&qd, profileQueries[i].queryEnd.GetAddressOf());
+					qd.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+					device->CreateQuery(&qd, profileQueries[i].queryDisjoint.GetAddressOf());
+				}
+			}
 		}
 
 		initialized = true;
@@ -411,6 +428,11 @@ namespace vr {
 			return;
 		}
 
+		if (Config::Instance().debugMode) {
+			context->Begin(profileQueries[currentQuery].queryDisjoint.Get());
+			context->End(profileQueries[currentQuery].queryStart.Get());
+		}
+
 		context->OMSetRenderTargets(0, nullptr, nullptr);
 
 		if (Config::Instance().fsrEnabled && Config::Instance().renderScale != 1) {
@@ -427,5 +449,34 @@ namespace vr {
 		UINT uavCount = -1;
 		context->CSSetUnorderedAccessViews(0, 1, currentUAVs, &uavCount);
 		context->CSSetConstantBuffers(0, 1, currentConstBuffs);
+
+		if (Config::Instance().debugMode) {
+			context->End(profileQueries[currentQuery].queryEnd.Get());
+			context->End(profileQueries[currentQuery].queryDisjoint.Get());
+
+			currentQuery = (currentQuery + 1) % QUERY_COUNT;
+			while (context->GetData(profileQueries[currentQuery].queryDisjoint.Get(), nullptr, 0, 0) == S_FALSE) {
+				Sleep(1);
+			}
+			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjoint;
+			HRESULT result = context->GetData(profileQueries[currentQuery].queryDisjoint.Get(), &disjoint, sizeof(disjoint), 0);
+			if (result == S_OK && !disjoint.Disjoint) {
+				UINT64 begin, end;
+				context->GetData(profileQueries[currentQuery].queryStart.Get(), &begin, sizeof(UINT64), 0);
+				context->GetData(profileQueries[currentQuery].queryEnd.Get(), &end, sizeof(UINT64), 0);
+				float duration = (end - begin) / float(disjoint.Frequency);
+				summedGpuTime += duration;
+				++countedQueries;
+
+				if (countedQueries >= 500) {
+					float avgTimeMs = 1000.f / countedQueries * summedGpuTime;
+					if (textureContainsOnlyOneEye)
+						avgTimeMs *= 2;
+					Log() << "Average GPU processing time for FSR application: " << avgTimeMs << " ms\n";
+					countedQueries = 0;
+					summedGpuTime = 0.f;
+				}
+			}
+		}
 	}
 }
