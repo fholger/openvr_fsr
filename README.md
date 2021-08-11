@@ -100,6 +100,9 @@ Example results:
   than the other, try setting `radius` to `2` in the config and check if that fixes it. This will disable a
   performance optimization, but it doesn't always work with all games or headsets.
 - If you encounter missing textures or banding, try setting `applyMIPBias` to `false` in the config.
+- If your tracking stops working or is misbehaving with the mod applied, there is a chance that you copied the mod DLL
+  to the wrong place. Please re-read the installation instructions and take special note of the plugin subfolders for
+  Unity and Unreal engines.
 
 ### Important disclaimer
 
