@@ -36,29 +36,29 @@ namespace vr {
 
 		// FSR upscale
 		ComPtr<ID3D11ComputeShader> upscaleShader;
-		ComPtr<ID3D11Buffer> upscaleConstantsBuffer;
+		ComPtr<ID3D11Buffer> upscaleConstantsBuffer[2];
 		ComPtr<ID3D11Texture2D> upscaledTexture;
 		ComPtr<ID3D11UnorderedAccessView> upscaledTextureUav;
 		ComPtr<ID3D11ShaderResourceView> upscaledTextureView;
 
 		void PrepareUpscalingResources();
-		void ApplyUpscaling(ID3D11ShaderResourceView *inputView);
+		void ApplyUpscaling(EVREye eEye, ID3D11ShaderResourceView *inputView);
 
 		// rCAS sharpening
 		ComPtr<ID3D11ComputeShader> rCASShader;
-		ComPtr<ID3D11Buffer> sharpenConstantsBuffer;
+		ComPtr<ID3D11Buffer> sharpenConstantsBuffer[2];
 		ComPtr<ID3D11Texture2D> sharpenedTexture;
 		ComPtr<ID3D11UnorderedAccessView> sharpenedTextureUav;
 
 		void PrepareSharpeningResources();
-		void ApplySharpening(ID3D11ShaderResourceView *inputView);
+		void ApplySharpening(EVREye eEye, ID3D11ShaderResourceView *inputView);
 
 		ID3D11Texture2D *lastSubmittedTexture = nullptr;
 		ID3D11Texture2D *outputTexture = nullptr;
 		int eyeCount = 0;
 
 		void PrepareResources(ID3D11Texture2D *inputTexture, EColorSpace colorSpace);
-		void ApplyPostProcess(ID3D11Texture2D *inputTexture);
+		void ApplyPostProcess(EVREye eEye, ID3D11Texture2D *inputTexture);
 
 		struct ProfileQuery {
 			ComPtr<ID3D11Query> queryDisjoint;

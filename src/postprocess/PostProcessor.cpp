@@ -125,7 +125,7 @@ namespace vr {
 
 			// if a single shared texture is used for both eyes, only apply effects on the first Submit
 			if (eyeCount == 0 || textureContainsOnlyOneEye || texture != lastSubmittedTexture) {
-				ApplyPostProcess(texture);
+				ApplyPostProcess(textureContainsOnlyOneEye ? eEye : Eye_Left, texture);
 			}
 			lastSubmittedTexture = texture;
 			eyeCount = (eyeCount + 1) % 2;
@@ -144,12 +144,14 @@ namespace vr {
 		copiedTexture.Reset();
 		copiedTextureView.Reset();
 		upscaleShader.Reset();
-		upscaleConstantsBuffer.Reset();
+		upscaleConstantsBuffer[0].Reset();
+		upscaleConstantsBuffer[1].Reset();
 		upscaledTexture.Reset();
 		upscaledTextureUav.Reset();
 		upscaledTextureView.Reset();
 		rCASShader.Reset();
-		sharpenConstantsBuffer.Reset();
+		sharpenConstantsBuffer[0].Reset();
+		sharpenConstantsBuffer[1].Reset();
 		sharpenedTexture.Reset();
 		sharpenedTextureUav.Reset();
 		lastSubmittedTexture = nullptr;
@@ -243,8 +245,8 @@ namespace vr {
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * proj[0];
 		constants.imageCentre[1] = outputHeight * proj[1];
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[2] : outputWidth / 2 * (1 + proj[2]);
-		constants.imageCentre[3] = outputHeight * proj[3];
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * (1 + proj[2]);
+		constants.imageCentre[3] = outputHeight * (textureContainsOnlyOneEye ? proj[1] : proj[3]);
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
@@ -260,7 +262,14 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
-		CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer.GetAddressOf()));
+		CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[0].GetAddressOf()));
+		if (textureContainsOnlyOneEye) {
+			constants.imageCentre[0] = outputWidth * proj[2];
+			constants.imageCentre[1] = outputHeight * proj[3];
+			constants.imageCentre[2] = outputWidth * proj[2];
+			constants.imageCentre[3] = outputHeight * proj[3];
+			CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[1].GetAddressOf()));
+		}
 
 		Log() << "Creating upscaled texture of size " << outputWidth << "x" << outputHeight << "\n";
 		D3D11_TEXTURE2D_DESC td;
@@ -289,10 +298,10 @@ namespace vr {
 		CheckResult("Creating upscaled SRV", device->CreateShaderResourceView(upscaledTexture.Get(), &srv, upscaledTextureView.GetAddressOf()));
 	}
 
-	void PostProcessor::ApplyUpscaling( ID3D11ShaderResourceView *inputView ) {
+	void PostProcessor::ApplyUpscaling( EVREye eEye, ID3D11ShaderResourceView *inputView ) {
 		UINT uavCount = -1;
 		context->CSSetUnorderedAccessViews( 0, 1, upscaledTextureUav.GetAddressOf(), &uavCount );
-		context->CSSetConstantBuffers( 0, 1, upscaleConstantsBuffer.GetAddressOf() );
+		context->CSSetConstantBuffers( 0, 1, upscaleConstantsBuffer[eEye].GetAddressOf() );
 		ID3D11ShaderResourceView *srvs[1] = {inputView};
 		context->CSSetShaderResources( 0, 1, srvs );
 		context->CSSetShader( upscaleShader.Get(), nullptr, 0 );
@@ -317,8 +326,8 @@ namespace vr {
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * proj[0];
 		constants.imageCentre[1] = outputHeight * proj[1];
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[2] : outputWidth / 2 * (1 + proj[2]);
-		constants.imageCentre[3] = outputHeight * proj[3];
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * (1 + proj[2]);
+		constants.imageCentre[3] = outputHeight * (textureContainsOnlyOneEye ? proj[1] : proj[3]);
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
@@ -335,7 +344,14 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
-		CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer.GetAddressOf()));
+		CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[0].GetAddressOf()));
+		if (textureContainsOnlyOneEye) {
+			constants.imageCentre[0] = outputWidth * proj[2];
+			constants.imageCentre[1] = outputHeight * proj[3];
+			constants.imageCentre[2] = outputWidth * proj[2];
+			constants.imageCentre[3] = outputHeight * proj[3];
+			CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[1].GetAddressOf()));
+		}
 		
 		Log() << "Creating sharpened texture of size " << outputWidth << "x" << outputHeight << "\n";
 		D3D11_TEXTURE2D_DESC td;
@@ -358,10 +374,10 @@ namespace vr {
 		CheckResult("Creating sharpened UAV", device->CreateUnorderedAccessView( sharpenedTexture.Get(), &uav, sharpenedTextureUav.GetAddressOf()));
 	}
 
-	void PostProcessor::ApplySharpening( ID3D11ShaderResourceView *inputView ) {
+	void PostProcessor::ApplySharpening( EVREye eEye, ID3D11ShaderResourceView *inputView ) {
 		UINT uavCount = -1;
 		context->CSSetUnorderedAccessViews( 0, 1, sharpenedTextureUav.GetAddressOf(), &uavCount );
-		context->CSSetConstantBuffers( 0, 1, sharpenConstantsBuffer.GetAddressOf() );
+		context->CSSetConstantBuffers( 0, 1, sharpenConstantsBuffer[eEye].GetAddressOf() );
 		ID3D11ShaderResourceView *srvs[1] = {inputView};
 		context->CSSetShaderResources( 0, 1, srvs );
 		context->CSSetSamplers( 0, 1, sampler.GetAddressOf() );
@@ -429,7 +445,7 @@ namespace vr {
 		initialized = true;
 	}
 
-	void PostProcessor::ApplyPostProcess( ID3D11Texture2D *inputTexture ) {
+	void PostProcessor::ApplyPostProcess( EVREye eEye, ID3D11Texture2D *inputTexture ) {
 		ID3D11Buffer* currentConstBuffs[1];
 		ID3D11ShaderResourceView* currentSRVs[1];
 		ID3D11UnorderedAccessView* currentUAVs[1];
@@ -453,12 +469,12 @@ namespace vr {
 		context->OMSetRenderTargets(0, nullptr, nullptr);
 
 		if (Config::Instance().fsrEnabled && Config::Instance().renderScale != 1) {
-			ApplyUpscaling(inputView);
+			ApplyUpscaling(eEye, inputView);
 			inputView = upscaledTextureView.Get();
 			outputTexture = upscaledTexture.Get();
 		}
 		if (Config::Instance().fsrEnabled) {
-			ApplySharpening(inputView);
+			ApplySharpening(eEye, inputView);
 			outputTexture = sharpenedTexture.Get();
 		}
 
