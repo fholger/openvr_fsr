@@ -120,7 +120,11 @@ namespace {
 					sd.MinLOD = -FLT_MAX;
 					sd.MaxLOD = FLT_MAX;
 				}
-				sd.MipLODBias += mipLodBias;
+				if (sd.MipLODBias == 0 && sd.MaxAnisotropy > 1) {
+					// only apply LOD bias to samplers that don't already have a bias and do anisotropic filtering
+					// this will hopefully reduce the chance of rendering errors due to incorrect biasing
+					sd.MipLODBias += mipLodBias;
+				}
 				device->CreateSamplerState(&sd, mappedSamplers[orig].GetAddressOf());
 				passThroughSamplers.insert(mappedSamplers[orig].Get());
 			}
