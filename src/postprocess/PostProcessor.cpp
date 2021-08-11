@@ -82,6 +82,15 @@ namespace vr {
 		}
 	}
 
+	void CalculateProjectionCenter(EVREye eye, float &x, float &y) {
+		IVRSystem *vrSystem = (IVRSystem*) VR_GetGenericInterface(IVRSystem_Version, nullptr);
+		float left, right, top, bottom;
+		vrSystem->GetProjectionRaw(eye, &left, &right, &top, &bottom);
+		x = 0.5f * (1.f + (right + left) / (left - right));
+		y = 0.5f * (1.f + (bottom + top) / (top - bottom));
+		Log() << "Projection center for eye " << eye << ": " << x << ", " << y << "\n";
+	}
+
 	void PostProcessor::Apply(EVREye eEye, const Texture_t *pTexture, const VRTextureBounds_t* pBounds, EVRSubmitFlags nSubmitFlags) {
 		if (!enabled || pTexture == nullptr || pTexture->eType != TextureType_DirectX || pTexture->handle == nullptr) {
 			return;
@@ -226,12 +235,16 @@ namespace vr {
 	void PostProcessor::PrepareUpscalingResources() {
 		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
 
+		float proj[4];
+		CalculateProjectionCenter(Eye_Left, proj[0], proj[1]);
+		CalculateProjectionCenter(Eye_Right, proj[2], proj[3]);
 		UpscaleConstants constants;
 		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
-		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
-		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * proj[0];
+		constants.imageCentre[1] = outputHeight * proj[1];
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[2] : outputWidth / 2 * (1 + proj[2]);
+		constants.imageCentre[3] = outputHeight * proj[3];
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
@@ -296,12 +309,16 @@ namespace vr {
 	void PostProcessor::PrepareSharpeningResources() {
 		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
+		float proj[4];
+		CalculateProjectionCenter(Eye_Left, proj[0], proj[1]);
+		CalculateProjectionCenter(Eye_Right, proj[2], proj[3]);
 		SharpenConstants constants;
 		float sharpness = AClampF1( Config::Instance().sharpness, 0, 1 );
 		FsrRcasCon(constants.const0, 2.f - 2*sharpness);
-		constants.imageCentre[1] = constants.imageCentre[3] = outputHeight / 2;
-		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth / 2 : outputWidth / 4;
-		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth / 2 : 3 * outputWidth / 4;
+		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * proj[0];
+		constants.imageCentre[1] = outputHeight * proj[1];
+		constants.imageCentre[2] = textureContainsOnlyOneEye ? outputWidth * proj[2] : outputWidth / 2 * (1 + proj[2]);
+		constants.imageCentre[3] = outputHeight * proj[3];
 		constants.radius[0] = 0.5f * Config::Instance().radius * outputHeight;
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
