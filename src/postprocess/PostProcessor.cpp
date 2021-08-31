@@ -86,7 +86,17 @@ namespace vr {
 		IVRSystem *vrSystem = (IVRSystem*) VR_GetGenericInterface(IVRSystem_Version, nullptr);
 		float left, right, top, bottom;
 		vrSystem->GetProjectionRaw(eye, &left, &right, &top, &bottom);
-		x = 0.5f * (1.f + (right + left) / (left - right));
+		Log() << "Raw projection for eye " << eye << ": l " << left << ", r " << right << ", t " << top << ", b " << bottom << "\n";
+
+		// calculate canted angle between the eyes
+		auto ml = vrSystem->GetEyeToHeadTransform(Eye_Left);
+		auto mr = vrSystem->GetEyeToHeadTransform(Eye_Right);
+		float dotForward = ml.m[2][0] * mr.m[2][0] + ml.m[2][1] * mr.m[2][1] + ml.m[2][2] * mr.m[2][2];
+		float cantedAngle = std::abs(std::acosf(dotForward) / 2) * (eye == Eye_Right ? -1 : 1);
+		Log() << "Display is canted by " << cantedAngle << " RAD\n";
+
+		float canted = std::tanf(cantedAngle);
+		x = 0.5f * (1.f + (right + left - 2*canted) / (left - right));
 		y = 0.5f * (1.f + (bottom + top) / (top - bottom));
 		Log() << "Projection center for eye " << eye << ": " << x << ", " << y << "\n";
 	}
