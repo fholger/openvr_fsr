@@ -41,7 +41,7 @@ namespace vr {
 		ComPtr<ID3D11UnorderedAccessView> upscaledTextureUav;
 		ComPtr<ID3D11ShaderResourceView> upscaledTextureView;
 
-		void PrepareUpscalingResources();
+		void PrepareUpscalingResources(DXGI_FORMAT format);
 		void ApplyUpscaling(EVREye eEye, ID3D11ShaderResourceView *inputView);
 
 		// rCAS sharpening
@@ -50,7 +50,7 @@ namespace vr {
 		ComPtr<ID3D11Texture2D> sharpenedTexture;
 		ComPtr<ID3D11UnorderedAccessView> sharpenedTextureUav;
 
-		void PrepareSharpeningResources();
+		void PrepareSharpeningResources(DXGI_FORMAT format);
 		void ApplySharpening(EVREye eEye, ID3D11ShaderResourceView *inputView);
 
 		ID3D11Texture2D *lastSubmittedTexture = nullptr;

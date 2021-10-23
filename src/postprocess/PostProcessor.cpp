@@ -54,6 +54,19 @@ namespace vr {
 		}
 	}
 
+	DXGI_FORMAT DetermineOutputFormat(DXGI_FORMAT inputFormat) {
+		switch (inputFormat) {
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+			// SteamVR applies a different color conversion for these formats that we can't match
+			// with R8G8B8 textures, so we have to use a matching texture format for our own resources.
+			// Otherwise we'll get darkened pictures (applies to Revive mostly)
+			return DXGI_FORMAT_R10G10B10A2_UNORM;
+		default:
+			return DXGI_FORMAT_R8G8B8A8_UNORM;
+		}
+	}
+
 	bool IsConsideredSrgbByOpenVR(DXGI_FORMAT format) {
 		switch (format) {
 		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
@@ -244,7 +257,7 @@ namespace vr {
 		AU1 radius[4];
 	};
 	
-	void PostProcessor::PrepareUpscalingResources() {
+	void PostProcessor::PrepareUpscalingResources(DXGI_FORMAT format) {
 		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
 
 		float proj[4];
@@ -289,19 +302,19 @@ namespace vr {
 		td.CPUAccessFlags = 0;
 		td.Usage = D3D11_USAGE_DEFAULT;
 		td.BindFlags = D3D11_BIND_UNORDERED_ACCESS|D3D11_BIND_SHADER_RESOURCE;
-		td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		td.Format = format;
 		td.MiscFlags = 0;
 		td.SampleDesc.Count = 1;
 		td.SampleDesc.Quality = 0;
 		td.ArraySize = 1;
 		CheckResult("Creating upscaled texture", device->CreateTexture2D( &td, nullptr, upscaledTexture.GetAddressOf()));
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav;
-		uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		uav.Format = format;
 		uav.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
 		uav.Texture2D.MipSlice = 0;
 		CheckResult("Creating upscaled UAV", device->CreateUnorderedAccessView( upscaledTexture.Get(), &uav, upscaledTextureUav.GetAddressOf()));
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv;
-		srv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srv.Format = format;
 		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MipLevels = 1;
 		srv.Texture2D.MostDetailedMip = 0;
@@ -325,7 +338,7 @@ namespace vr {
 		AU1 radius[4];
 	};
 
-	void PostProcessor::PrepareSharpeningResources() {
+	void PostProcessor::PrepareSharpeningResources(DXGI_FORMAT format) {
 		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
 
 		float proj[4];
@@ -371,14 +384,14 @@ namespace vr {
 		td.CPUAccessFlags = 0;
 		td.Usage = D3D11_USAGE_DEFAULT;
 		td.BindFlags = D3D11_BIND_UNORDERED_ACCESS|D3D11_BIND_SHADER_RESOURCE;
-		td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		td.Format = format;
 		td.MiscFlags = 0;
 		td.SampleDesc.Count = 1;
 		td.SampleDesc.Quality = 0;
 		td.ArraySize = 1;
 		CheckResult("Creating sharpened texture", device->CreateTexture2D( &td, nullptr, sharpenedTexture.GetAddressOf()));
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav;
-		uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		uav.Format = format;
 		uav.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
 		uav.Texture2D.MipSlice = 0;
 		CheckResult("Creating sharpened UAV", device->CreateUnorderedAccessView( sharpenedTexture.Get(), &uav, sharpenedTextureUav.GetAddressOf()));
@@ -424,10 +437,12 @@ namespace vr {
 		}
 
 		if (Config::Instance().fsrEnabled) {
+			DXGI_FORMAT textureFormat = DetermineOutputFormat(std.Format);
+			Log() << "Creating FSR textures in format " << textureFormat << "\n";
 			if (Config::Instance().renderScale != 1) {
-				PrepareUpscalingResources();
+				PrepareUpscalingResources(textureFormat);
 			}
-			PrepareSharpeningResources();
+			PrepareSharpeningResources(textureFormat);
 
 			if (Config::Instance().applyMIPBias) {
 				float mipLodBias = -log2(outputWidth / (float)inputWidth);
