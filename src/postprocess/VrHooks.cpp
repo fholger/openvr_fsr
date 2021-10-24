@@ -53,7 +53,8 @@ namespace {
 		postProcessor.Apply(eEye, pTexture, pBounds, nSubmitFlags);
 		vr::EVRCompositorError error = CallOriginal(IVRCompositor_Submit)(self, eEye, pTexture, pBounds, nSubmitFlags);
 		if (error != vr::VRCompositorError_None) {
-			Log() << "Error when submitting for eye " << eEye << ": " << error << std::endl;
+			if (Config::Instance().debugMode)
+				Log() << "Error when submitting for eye " << eEye << ": " << error << std::endl;
 		}
 
 		const_cast<vr::Texture_t*>(pTexture)->handle = origHandle;
