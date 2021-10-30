@@ -210,7 +210,7 @@ namespace vr {
 		CheckResult("Creating copy SRV", device->CreateShaderResourceView(copiedTexture.Get(), &srv, copiedTextureView.GetAddressOf()));
 	}
 
-	ID3D11ShaderResourceView * PostProcessor::GetInputView( ID3D11Texture2D *inputTexture ) {
+	ID3D11ShaderResourceView * PostProcessor::GetInputView( ID3D11Texture2D *inputTexture, int eye ) {
 		if (requiresCopy) {
 			D3D11_TEXTURE2D_DESC td;
 			inputTexture->GetDesc(&td);
@@ -238,14 +238,33 @@ namespace vr {
 			svd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			svd.Texture2D.MostDetailedMip = 0;
 			svd.Texture2D.MipLevels = 1;
-			HRESULT result = device->CreateShaderResourceView( inputTexture, &svd, inputTextureViews[inputTexture].GetAddressOf() );
+			EyeViews &views = inputTextureViews[inputTexture];
+			HRESULT result = device->CreateShaderResourceView( inputTexture, &svd, views.view[0].GetAddressOf() );
 			if (FAILED(result)) {
 				Log() << "Failed to create resource view: " << std::hex << (unsigned long)result << std::dec << std::endl;
 				inputTextureViews.erase( inputTexture );
 				return nullptr;
 			}
+			if (std.ArraySize > 1) {
+				// if an array texture was submitted, the right eye will be placed in the second entry, so we need
+				// a separate view for that eye
+				Log() << "Texture is an array texture, using separate subview for right eye\n";
+				svd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+				svd.Texture2DArray.ArraySize = 1;
+				svd.Texture2DArray.FirstArraySlice = D3D11CalcSubresource( 0, 1, 1 );
+				svd.Texture2DArray.MostDetailedMip = 0;
+				svd.Texture2DArray.MipLevels = 1;
+				result = device->CreateShaderResourceView( inputTexture, &svd, views.view[1].GetAddressOf() );
+				if (FAILED(result)) {
+					Log() << "Failed to create secondary resource view: " << std::hex << (unsigned long)result << std::dec << std::endl;
+					inputTextureViews.erase( inputTexture );
+					return nullptr;
+				}
+			} else {
+				views.view[1] = views.view[0];
+			}
 		}
-		return inputTextureViews[inputTexture].Get();
+		return inputTextureViews[inputTexture].view[eye].Get();
 	}
 
 	struct UpscaleConstants {
@@ -481,7 +500,7 @@ namespace vr {
 
 		outputTexture = inputTexture;
 
-		ID3D11ShaderResourceView *inputView = GetInputView(inputTexture);
+		ID3D11ShaderResourceView *inputView = GetInputView(inputTexture, eEye);
 		if (inputView == nullptr) {
 			return;
 		}

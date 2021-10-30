@@ -26,13 +26,16 @@ namespace vr {
 		ComPtr<ID3D11DeviceContext> context;
 		ComPtr<ID3D11SamplerState> sampler;
 
-		std::unordered_map<ID3D11Texture2D*, ComPtr<ID3D11ShaderResourceView>> inputTextureViews;
+		struct EyeViews {
+			ComPtr<ID3D11ShaderResourceView> view[2];
+		};
+		std::unordered_map<ID3D11Texture2D*, EyeViews> inputTextureViews;
 		// in case the incoming texture can't be bound as an SRV, we'll need to prepare a copy
 		ComPtr<ID3D11Texture2D> copiedTexture;
 		ComPtr<ID3D11ShaderResourceView> copiedTextureView;
 
 		void PrepareCopyResources(DXGI_FORMAT format);
-		ID3D11ShaderResourceView *GetInputView(ID3D11Texture2D *inputTexture);
+		ID3D11ShaderResourceView *GetInputView(ID3D11Texture2D *inputTexture, int eye);
 
 		// FSR upscale
 		ComPtr<ID3D11ComputeShader> upscaleShader;
