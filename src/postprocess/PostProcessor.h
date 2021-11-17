@@ -37,18 +37,23 @@ namespace vr {
 		void PrepareCopyResources(DXGI_FORMAT format);
 		ID3D11ShaderResourceView *GetInputView(ID3D11Texture2D *inputTexture, int eye);
 
-		// FSR upscale
+		// upscale resources
 		ComPtr<ID3D11ComputeShader> upscaleShader;
 		ComPtr<ID3D11Buffer> upscaleConstantsBuffer[2];
 		ComPtr<ID3D11Texture2D> upscaledTexture;
 		ComPtr<ID3D11UnorderedAccessView> upscaledTextureUav;
 		ComPtr<ID3D11ShaderResourceView> upscaledTextureView;
+		// NIS specific lookup textures
+		ComPtr<ID3D11Texture2D> scalerCoeffTexture;
+		ComPtr<ID3D11Texture2D> usmCoeffTexture;
+		ComPtr<ID3D11ShaderResourceView> scalerCoeffView;
+		ComPtr<ID3D11ShaderResourceView> usmCoeffView;
 
 		void PrepareUpscalingResources(DXGI_FORMAT format);
 		void ApplyUpscaling(EVREye eEye, ID3D11ShaderResourceView *inputView);
 
-		// rCAS sharpening
-		ComPtr<ID3D11ComputeShader> rCASShader;
+		// sharpening resources
+		ComPtr<ID3D11ComputeShader> sharpenShader;
 		ComPtr<ID3D11Buffer> sharpenConstantsBuffer[2];
 		ComPtr<ID3D11Texture2D> sharpenedTexture;
 		ComPtr<ID3D11UnorderedAccessView> sharpenedTextureUav;

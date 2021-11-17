@@ -59,6 +59,12 @@ set(FSR_FILES
 	fsr/fsr_easu.hlsl
 	fsr/fsr_rcas.hlsl
 )
+set(NIS_FILES
+	nis/NIS_Config.h
+	nis/NIS_Scaler.h
+	nis/NIS_Upscale.hlsl
+	nis/NIS_Sharpen.hlsl
+)
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(MINHOOK_HDE minhook/src/hde/hde64.c)
 else()
@@ -77,6 +83,7 @@ set(SOURCE_FILES
 	${VRCOMMON_FILES}
 	${POSTPROCESS_FILES}
 	${FSR_FILES}
+	${NIS_FILES}
 	${MINHOOK_FILES}
 )
 
@@ -100,6 +107,10 @@ source_group("PostProcess" FILES
 
 source_group("FSR" FILES
 	${FSR_FILES}
+)
+
+source_group("NIS" FILES
+	${NIS_FILES}
 )
 
 source_group("MinHook" FILES
@@ -147,6 +158,14 @@ set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_TYPE Compute)
 set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_MODEL "5.0")
 set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_fsr_rcas.h")
 set_property(SOURCE fsr/fsr_rcas.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_FSRSharpenShader")
+set_property(SOURCE nis/NIS_Upscale.hlsl PROPERTY VS_SHADER_TYPE Compute)
+set_property(SOURCE nis/NIS_Upscale.hlsl PROPERTY VS_SHADER_MODEL "5.0")
+set_property(SOURCE nis/NIS_Upscale.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_nis_upscale.h")
+set_property(SOURCE nis/NIS_Upscale.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_NISUpscaleShader")
+set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_TYPE Compute)
+set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_MODEL "5.0")
+set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_nis_sharpen.h")
+set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_NISSharpenShader")
 
 target_link_libraries(${LIBNAME} ${EXTRA_LIBS} ${CMAKE_DL_LIBS})
 target_include_directories(${LIBNAME} PUBLIC ${OPENVR_HEADER_DIR})

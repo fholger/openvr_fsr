@@ -1,10 +1,12 @@
-Modified OpenVR DLL with AMD FidelityFX SuperResolution Upscaler
+Modified OpenVR DLL with AMD FidelityFX SuperResolution / NVIDIA Image Scaling
 ---
 
-This modified openvr_api.dll allows you to apply [FidelityFX SuperResolution](https://gpuopen.com/fidelityfx-superresolution/)
-upscaling to many SteamVR games, as long as they use D3D11.
+This modified openvr_api.dll allows you to apply
+either [AMD's FidelityFX SuperResolution](https://gpuopen.com/fidelityfx-superresolution/)
+or [NVIDIA's Image Scaling](https://github.com/NVIDIAGameWorks/NVIDIAImageScaling)
+to many SteamVR games, as long as they use D3D11.
 
-### About FidelityFX Super Resolution
+### About AMD's FidelityFX Super Resolution
 
 FidelityFX Super Resolution (FSR for short) is an upscaling technique developed by AMD,
 but it works on pretty much any graphics card, including NVIDIA cards. The idea is that
@@ -16,15 +18,24 @@ the actual upscaling to the target resolution, where particular attention is pai
 in the lower resolution picture. The second step is a sharpening step to counter some of the
 blur introduced by the upscaling.
 
+### About NVIDIA Image Scaling
+
+NVIDIA Image Scaling (NIS for short) is NVIDIA's answer to FSR. Like FSR, it is an upscaling
+algorithm intended to scale a lower-resolution rendered frame to a higher-resolution output.
+The algorithm works differently, though, and so the output of NIS will differ from that of FSR.
+It is hard to say which one is better. It may come down to personal preference and even the
+particular game you are using it for. Feel free to experiment with both, that's why both are
+available in this mod :)
+
 ### Notes about image quality
 
-Note that, unlike DLSS, FSR is *not* an anti-aliasing solution. Any aliasing and shimmering
-edges present in the original image will not be fixed by FSR. As such, the final image quality
-of FSR depends a lot on the particular game you are using it with. *AMD specifically advises
+Note that, unlike DLSS, FSR/NIS is *not* an anti-aliasing solution. Any aliasing and shimmering
+edges present in the original image will not be fixed in the output. As such, the final image
+quality depends a lot on the particular game you are using it with. *AMD specifically advises
 that FSR should be used in conjunction with the highest-quality anti-aliasing setting a game
 has to offer.* In the case of VR games, that means enabling MSAA if it is available, or
 else TAA. You may also want to experiment with turning off any sort of post-processing effects
-in the games, as some of these should ideally run after FSR, but with this plugin will run
+in the games, as some of these should ideally run after FSR/NIS, but with this plugin will run
 before it and so may negatively affect the image quality.
 
 ### Installation instructions
@@ -70,16 +81,19 @@ sharper the final image will appear. You probably want to set this value higher 
 You can increase it up to 1.0 if you like an even sharper image. But if the image is too
 sharp for your taste, consider experimenting with lower values.
 
+To switch between FSR and NIS, set the parameter `useNIS` either to `false` (FSR, default)
+or `true` (NIS).
+
 ### Performance considerations
 
 While rendering at a lower resolution will save you performance (which is the entire point),
-the FSR upscaler does have a fixed cost in GPU time, and this time depends on your GPU and
+the upscaler does have a fixed cost in GPU time, and this time depends on your GPU and
 the target resolution (*not* the render resolution). So the higher your target resolution, the
-higher the cost of the FSR upscaler. It means that, the higher your target resolution,
+higher the cost of the upscaler. It means that, the higher your target resolution,
 the lower you may have to set the render resolution (by lowering `renderScale`) before you see
 an actual net benefit for your GPU times.
 
-A part of the overhead of FSR can be mitigated by using a sort of "fixed foveated" optimization
+A part of the overhead of FSR/NIS can be mitigated by using a sort of "fixed foveated" optimization
 where only the center of the image is upscaled by the more expensive FSR algorithm, while the
 edges are upscaled by cheaper bilinear sampling. This can be controlled in the mod by the
 `radius` setting, where anything within the radius from the center of the image is upscaled
@@ -106,9 +120,9 @@ Example results:
 
 ### Important disclaimer
 
-This is a best-effort experiment and hack to bring this upscaling technique to VR games
-which do not support it natively. Please understand that the approach taken here cannot
-guarantee the optimal quality that FSR might, in theory, be capable of. AMD has specific
+This is a best-effort experiment and hack to bring these upscaling techniques to VR games
+which do not support them natively. Please understand that the approach taken here cannot
+guarantee the optimal quality that FSR or NIS might, in theory, be capable of. AMD has specific
 recommendations where and how FSR should be placed in the render pipeline. Due to the
 nature of this generic hack, I cannot guarantee nor control that all of these recommendations
 are actually met for any particular game. Please do not judge the quality of FSR solely by

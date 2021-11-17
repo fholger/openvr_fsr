@@ -6,9 +6,12 @@
 #define A_CPU
 #include "fsr/ffx_a.h"
 #include "fsr/ffx_fsr1.h"
+#include "nis/NIS_Config.h"
 #include "Config.h"
 #include "shader_fsr_easu.h"
 #include "shader_fsr_rcas.h"
+#include "shader_nis_upscale.h"
+#include "shader_nis_sharpen.h"
 #include "VrHooks.h"
 
 using Microsoft::WRL::ComPtr;
@@ -172,7 +175,7 @@ namespace vr {
 		upscaledTexture.Reset();
 		upscaledTextureUav.Reset();
 		upscaledTextureView.Reset();
-		rCASShader.Reset();
+		sharpenShader.Reset();
 		sharpenConstantsBuffer[0].Reset();
 		sharpenConstantsBuffer[1].Reset();
 		sharpenedTexture.Reset();
@@ -277,13 +280,17 @@ namespace vr {
 	};
 	
 	void PostProcessor::PrepareUpscalingResources(DXGI_FORMAT format) {
-		CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
+		if (Config::Instance().useNis) {
+			CheckResult("Creating NIS upscale shader", device->CreateComputeShader( g_NISUpscaleShader, sizeof(g_NISUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
+		} else {
+			CheckResult("Creating FSR upscale shader", device->CreateComputeShader( g_FSRUpscaleShader, sizeof(g_FSRUpscaleShader), nullptr, upscaleShader.GetAddressOf()));
+		}
 
+		// set up shader constants
 		float proj[4];
 		CalculateProjectionCenter(Eye_Left, proj[0], proj[1]);
 		CalculateProjectionCenter(Eye_Right, proj[2], proj[3]);
 		UpscaleConstants constants;
-		// create shader constants buffers
 		FsrEasuCon(constants.const0, constants.const1, constants.const2, constants.const3, inputWidth, inputHeight, inputWidth, inputHeight, outputWidth, outputHeight);
 		constants.imageCentre[0] = textureContainsOnlyOneEye ? outputWidth * proj[0] : outputWidth / 2 * proj[0];
 		constants.imageCentre[1] = outputHeight * proj[1];
@@ -293,6 +300,13 @@ namespace vr {
 		constants.radius[1] = constants.radius[0] * constants.radius[0];
 		constants.radius[2] = outputWidth;
 		constants.radius[3] = outputHeight;
+
+		NISConfig nisConfig;
+		NVScalerUpdateConfig( nisConfig, Config::Instance().sharpness, 0, 0, inputWidth, inputHeight, inputWidth, inputHeight, 0, 0, outputWidth, outputHeight, outputWidth, outputHeight );
+		nisConfig.reserved1 = Config::Instance().debugMode ? 1.f : 0.f;
+		memcpy(&nisConfig.imageCentre[0], &constants.imageCentre[0], sizeof(AU1) * 8);
+
+		// create shader constants buffers
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -304,13 +318,20 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
-		CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[0].GetAddressOf()));
+
+		if (Config::Instance().useNis) {
+			init.pSysMem = &nisConfig;
+			bd.ByteWidth = sizeof(NISConfig);
+		}
+
+		CheckResult("Creating upscale constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[0].GetAddressOf()));
 		if (textureContainsOnlyOneEye) {
 			constants.imageCentre[0] = outputWidth * proj[2];
 			constants.imageCentre[1] = outputHeight * proj[3];
 			constants.imageCentre[2] = outputWidth * proj[2];
 			constants.imageCentre[3] = outputHeight * proj[3];
-			CheckResult("Creating FSR constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[1].GetAddressOf()));
+			memcpy(&nisConfig.imageCentre[0], &constants.imageCentre[0], sizeof(AU1) * 4);
+			CheckResult("Creating upscale constants buffer", device->CreateBuffer( &bd, &init, upscaleConstantsBuffer[1].GetAddressOf()));
 		}
 
 		Log() << "Creating upscaled texture of size " << outputWidth << "x" << outputHeight << "\n";
@@ -338,6 +359,24 @@ namespace vr {
 		srv.Texture2D.MipLevels = 1;
 		srv.Texture2D.MostDetailedMip = 0;
 		CheckResult("Creating upscaled SRV", device->CreateShaderResourceView(upscaledTexture.Get(), &srv, upscaledTextureView.GetAddressOf()));
+
+		if (Config::Instance().useNis) {
+			Log() << "Creating NIS coefficients lookup textures\n";
+			td.Width = kFilterSize / 4;
+			td.Height = kPhaseCount;
+			td.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+			D3D11_SUBRESOURCE_DATA texData;
+			texData.pSysMem = coef_scale;
+			texData.SysMemPitch = kFilterSize * 4;
+			texData.SysMemSlicePitch = kFilterSize * 4 * kPhaseCount;
+			CheckResult("Creating NIS upscale coefficients texture", device->CreateTexture2D( &td, &texData, scalerCoeffTexture.GetAddressOf() ));
+			srv.Format = td.Format;
+			CheckResult("Creating NIS upscale coefficients view", device->CreateShaderResourceView( scalerCoeffTexture.Get(), &srv, scalerCoeffView.GetAddressOf() ));
+			texData.pSysMem = coef_usm;
+			CheckResult("Creating NIS USM coefficients texture", device->CreateTexture2D( &td, &texData, usmCoeffTexture.GetAddressOf() ));
+			CheckResult("Creating NIS USM coefficients view", device->CreateShaderResourceView( usmCoeffTexture.Get(), &srv, usmCoeffView.GetAddressOf() ));
+		}
 	}
 
 	void PostProcessor::ApplyUpscaling( EVREye eEye, ID3D11ShaderResourceView *inputView ) {
@@ -348,7 +387,14 @@ namespace vr {
 		context->CSSetShaderResources( 0, 1, srvs );
 		context->CSSetShader( upscaleShader.Get(), nullptr, 0 );
 		context->CSSetSamplers( 0, 1, sampler.GetAddressOf() );
-		context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
+
+		if (Config::Instance().useNis) {
+			context->CSSetShaderResources( 1, 1, scalerCoeffView.GetAddressOf() );
+			context->CSSetShaderResources( 2, 1, usmCoeffView.GetAddressOf() );
+			context->Dispatch( (UINT)std::ceil(outputWidth / 32.f), (UINT)std::ceil(outputHeight / 24.f), 1 );
+		} else {
+			context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
+		}
 	}
 
 	struct SharpenConstants {
@@ -358,7 +404,11 @@ namespace vr {
 	};
 
 	void PostProcessor::PrepareSharpeningResources(DXGI_FORMAT format) {
-		CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, rCASShader.GetAddressOf()));
+		if (Config::Instance().useNis) {
+			CheckResult("Creating NIS sharpening shader", device->CreateComputeShader( g_NISSharpenShader, sizeof(g_NISSharpenShader), nullptr, sharpenShader.GetAddressOf()));
+		} else {
+			CheckResult("Creating rCAS sharpening shader", device->CreateComputeShader( g_FSRSharpenShader, sizeof(g_FSRSharpenShader), nullptr, sharpenShader.GetAddressOf()));
+		}
 
 		float proj[4];
 		CalculateProjectionCenter(Eye_Left, proj[0], proj[1]);
@@ -375,6 +425,12 @@ namespace vr {
 		constants.radius[2] = outputWidth;
 		constants.radius[3] = outputHeight;
 		constants.const0[3] = Config::Instance().debugMode;
+
+		NISConfig nisConfig;
+		NVSharpenUpdateConfig( nisConfig, Config::Instance().sharpness, 0, 0, inputWidth, inputHeight, inputWidth, inputHeight, 0, 0 );
+		nisConfig.reserved1 = Config::Instance().debugMode ? 1.f : 0.f;
+		memcpy(&nisConfig.imageCentre[0], &constants.imageCentre[0], sizeof(AU1) * 8);
+
 		D3D11_BUFFER_DESC bd;
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
 		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -386,13 +442,18 @@ namespace vr {
 		init.SysMemPitch = 0;
 		init.SysMemSlicePitch = 0;
 		init.pSysMem = &constants;
-		CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[0].GetAddressOf()));
+		if (Config::Instance().useNis) {
+			init.pSysMem = &nisConfig;
+			bd.ByteWidth = sizeof(NISConfig);
+		}
+		CheckResult("Creating sharpen constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[0].GetAddressOf()));
 		if (textureContainsOnlyOneEye) {
 			constants.imageCentre[0] = outputWidth * proj[2];
 			constants.imageCentre[1] = outputHeight * proj[3];
 			constants.imageCentre[2] = outputWidth * proj[2];
 			constants.imageCentre[3] = outputHeight * proj[3];
-			CheckResult("Creating rCAS constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[1].GetAddressOf()));
+			memcpy(&nisConfig.imageCentre[0], &constants.imageCentre[0], sizeof(AU1) * 4);
+			CheckResult("Creating sharpen constants buffer", device->CreateBuffer( &bd, &init, sharpenConstantsBuffer[1].GetAddressOf()));
 		}
 		
 		Log() << "Creating sharpened texture of size " << outputWidth << "x" << outputHeight << "\n";
@@ -423,8 +484,12 @@ namespace vr {
 		ID3D11ShaderResourceView *srvs[1] = {inputView};
 		context->CSSetShaderResources( 0, 1, srvs );
 		context->CSSetSamplers( 0, 1, sampler.GetAddressOf() );
-		context->CSSetShader( rCASShader.Get(), nullptr, 0 );
-		context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
+		context->CSSetShader( sharpenShader.Get(), nullptr, 0 );
+		if (Config::Instance().useNis) {
+			context->Dispatch( (UINT)std::ceil(outputWidth / 32.f), (UINT)std::ceil(outputHeight / 32.f), 1 );
+		} else {
+			context->Dispatch( (outputWidth+15)>>4, (outputHeight+15)>>4, 1 );
+		}
 	}
 
 	void PostProcessor::PrepareResources( ID3D11Texture2D *inputTexture, EColorSpace colorSpace ) {
@@ -457,11 +522,14 @@ namespace vr {
 
 		if (Config::Instance().fsrEnabled) {
 			DXGI_FORMAT textureFormat = DetermineOutputFormat(std.Format);
-			Log() << "Creating FSR textures in format " << textureFormat << "\n";
-			if (Config::Instance().renderScale != 1) {
+			Log() << "Creating output textures in format " << textureFormat << "\n";
+			Log() << "Using " << (Config::Instance().useNis ? "NVIDIA Image Scaling" : "AMD FidelityFX SuperResolution") << "\n";
+			if (Config::Instance().renderScale != 1.f) {
 				PrepareUpscalingResources(textureFormat);
 			}
-			PrepareSharpeningResources(textureFormat);
+			if (!Config::Instance().useNis || Config::Instance().renderScale == 1.f) {
+				PrepareSharpeningResources(textureFormat);
+			}
 
 			if (Config::Instance().applyMIPBias) {
 				float mipLodBias = -log2(outputWidth / (float)inputWidth);
@@ -491,10 +559,10 @@ namespace vr {
 
 	void PostProcessor::ApplyPostProcess( EVREye eEye, ID3D11Texture2D *inputTexture ) {
 		ID3D11Buffer* currentConstBuffs[1];
-		ID3D11ShaderResourceView* currentSRVs[1];
+		ID3D11ShaderResourceView* currentSRVs[3];
 		ID3D11UnorderedAccessView* currentUAVs[1];
 
-		context->CSGetShaderResources(0, 1, currentSRVs);
+		context->CSGetShaderResources(0, 3, currentSRVs);
 		context->CSGetUnorderedAccessViews(0, 1, currentUAVs);
 		context->CSGetConstantBuffers(0, 1, currentConstBuffs);
 
@@ -512,17 +580,17 @@ namespace vr {
 
 		context->OMSetRenderTargets(0, nullptr, nullptr);
 
-		if (Config::Instance().fsrEnabled && Config::Instance().renderScale != 1) {
+		if (Config::Instance().fsrEnabled && Config::Instance().renderScale != 1.f) {
 			ApplyUpscaling(eEye, inputView);
 			inputView = upscaledTextureView.Get();
 			outputTexture = upscaledTexture.Get();
 		}
-		if (Config::Instance().fsrEnabled) {
+		if (Config::Instance().fsrEnabled && (!Config::Instance().useNis || Config::Instance().renderScale == 1.f)) {
 			ApplySharpening(eEye, inputView);
 			outputTexture = sharpenedTexture.Get();
 		}
 
-		context->CSSetShaderResources(0, 1, currentSRVs);
+		context->CSSetShaderResources(0, 3, currentSRVs);
 		UINT uavCount = -1;
 		context->CSSetUnorderedAccessViews(0, 1, currentUAVs, &uavCount);
 		context->CSSetConstantBuffers(0, 1, currentConstBuffs);
@@ -549,7 +617,7 @@ namespace vr {
 					float avgTimeMs = 1000.f / countedQueries * summedGpuTime;
 					if (textureContainsOnlyOneEye)
 						avgTimeMs *= 2;
-					Log() << "Average GPU processing time for FSR application: " << avgTimeMs << " ms\n";
+					Log() << "Average GPU processing time for upscale: " << avgTimeMs << " ms\n";
 					countedQueries = 0;
 					summedGpuTime = 0.f;
 				}

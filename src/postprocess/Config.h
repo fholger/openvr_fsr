@@ -12,6 +12,7 @@ struct Config {
 	float sharpness = 0.75f;
 	float radius = 0.5f;
 	bool debugMode = false;
+	bool useNis = false;
 
 	static Config Load() {
 		Config config;
@@ -28,6 +29,7 @@ struct Config {
 				config.applyMIPBias = fsr.get("applyMIPBias", true).asBool();
 				config.radius = fsr.get("radius", 0.5).asFloat();
 				config.debugMode = fsr.get("debugMode", false).asBool();
+				config.useNis = fsr.get("useNIS", false).asBool();
 			}
 		} catch (...) {
 			Log() << "Could not read config file.\n";
