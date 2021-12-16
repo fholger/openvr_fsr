@@ -4507,6 +4507,24 @@ public class OpenVRInterop
 	internal static extern bool IsInterfaceVersionValid([In, MarshalAs(UnmanagedType.LPStr)] string pchInterfaceVersion);
 	[DllImportAttribute("openvr_api", EntryPoint = "VR_GetInitToken", CallingConvention = CallingConvention.Cdecl)]
 	internal static extern uint GetInitToken();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "LiquidVR", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr LiquidVR();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRCompositorSystemInternal", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRCompositorSystemInternal();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRControlPanel", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRControlPanel();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VROculusDirect", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VROculusDirect();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRPaths", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRPaths();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRRenderModelsInternal", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRRenderModelsInternal();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRSceneGraph", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRSceneGraph();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRTrackedCameraInternal", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRTrackedCameraInternal();
+ 	[DllImportAttribute("openvr_api", EntryPoint = "VRVirtualDisplay", CallingConvention = CallingConvention.Cdecl)]
+ 	internal static extern IntPtr VRVirtualDisplay();
 }
 
 
