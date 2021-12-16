@@ -1,10 +1,15 @@
-Modified OpenVR DLL with AMD FidelityFX SuperResolution / NVIDIA Image Scaling
+Modified OpenVR_FSR adding AMD FidelityFX SuperResolution / NVIDIA Image Scaling to SteamVR games, including Half-Life: Alyx.
 ---
 
 This modified openvr_api.dll allows you to apply
 either [AMD's FidelityFX SuperResolution](https://gpuopen.com/fidelityfx-superresolution/)
 or [NVIDIA's Image Scaling](https://github.com/NVIDIAGameWorks/NVIDIAImageScaling)
 to many SteamVR games, as long as they use D3D11.
+
+This fork adds a few missing functions that enable the DLL to work with Half-Life: Alyx,
+but was not throughly tested and has known issues. I make this code and DLL available in case anyone
+is interested in testing it and investigating the issues. Check out the [original version](https://github.com/fholger/openvr_fsr) and
+specially [issue #55](https://github.com/fholger/openvr_fsr/issues/55) for more details.
 
 ### About AMD's FidelityFX Super Resolution
 
