@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <windows.h>
 
 namespace {
 	std::unordered_map<void*, void*> hooksToOriginal;
@@ -34,10 +35,85 @@ namespace {
 		return (T)hooksToOriginal[hookFunction];
 	}
 
+	BOOL IsBadMemPtr(BOOL write, void *ptr, size_t size)
+	{
+		MEMORY_BASIC_INFORMATION mbi;
+		BOOL ok;
+		DWORD mask;
+		BYTE *p = (BYTE *)ptr;
+		BYTE *maxp = p + size;
+		BYTE *regend = NULL;
+
+		if (size == 0)
+		{
+			return FALSE;
+		}
+
+		if (p == NULL)
+		{
+			return TRUE;
+		}
+
+		if (write == FALSE)
+		{
+			mask = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+		}
+		else
+		{
+			mask = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+		}
+
+		do
+		{
+			if (p == ptr || p == regend)
+			{
+				if (VirtualQuery((LPCVOID)p, &mbi, sizeof(mbi)) == 0)
+				{
+					return TRUE;
+				}
+				else
+				{
+					regend = ((BYTE *)mbi.BaseAddress + mbi.RegionSize);
+				}
+			}
+
+			ok = (mbi.Protect & mask) != 0;
+
+			if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS))
+			{
+				ok = FALSE;
+			}
+
+			if (!ok)
+			{
+				return TRUE;
+			}
+
+			if (maxp <= regend) /* the whole address range is inside the current memory region */
+			{
+				return FALSE;
+			}
+			else if (maxp > regend) /* this region is a part of (or overlaps with) the address range we are checking */
+			{
+				p = regend; /* lets move to the next memory region */
+			}
+		} while (p < maxp);
+
+		return FALSE;
+	}
+
 	void IVRSystem_GetRecommendedRenderTargetSize(vr::IVRSystem *self, uint32_t *pnWidth, uint32_t *pnHeight) {
 		CallOriginal(IVRSystem_GetRecommendedRenderTargetSize)(self, pnWidth, pnHeight);
 
 		if (pnWidth == nullptr || pnHeight == nullptr) {
+			return;
+		}
+
+		if (IsBadMemPtr(TRUE, pnWidth, sizeof(pnWidth)) || IsBadMemPtr(TRUE, pnHeight, sizeof(pnHeight))) {
+			return;
+		}
+
+		if (*pnWidth == 0 || *pnHeight == 0) {
 			return;
 		}
 
