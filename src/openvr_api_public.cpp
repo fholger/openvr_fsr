@@ -43,6 +43,16 @@ namespace vr
 namespace {
 }
 
+static void *m_pLiquidVR;
+static void *m_pVRCompositorSystemInternal;
+static void *m_pVRControlPanel;
+static void *m_pVROculusDirect;
+static void *m_pVRPaths;
+static void *m_pVRRenderModelsInternal;
+static void *m_pVRSceneGraph;
+static void *m_pVRTrackedCameraInternal;
+static void *m_pVRVirtualDisplay;
+
 static void *g_pVRModule = NULL;
 static IVRClientCore *g_pHmdSystem = NULL;
 static std::recursive_mutex g_mutexSystem;
@@ -117,6 +127,16 @@ void VR_ShutdownInternal()
 	}
 
 	++g_nVRToken;
+
+	m_pLiquidVR = nullptr;
+	m_pVRCompositorSystemInternal = nullptr;
+	m_pVRControlPanel = nullptr;
+	m_pVROculusDirect = nullptr;
+	m_pVRPaths = nullptr;
+	m_pVRRenderModelsInternal = nullptr;
+	m_pVRSceneGraph = nullptr;
+	m_pVRTrackedCameraInternal = nullptr;
+	m_pVRVirtualDisplay = nullptr;
 }
 
 EVRInitError VR_LoadHmdSystemInternal()
