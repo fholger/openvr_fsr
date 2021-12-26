@@ -1,5 +1,6 @@
 //========= Copyright Valve Corporation ============//
 #define VR_API_EXPORT 1
+#define VR_API_PUBLIC 1
 #include "openvr.h"
 #include "openvr_capi.h"
 #include "ivrclientcore.h"
@@ -41,6 +42,16 @@ namespace vr
 {
 namespace {
 }
+
+static void *m_pLiquidVR;
+static void *m_pVRCompositorSystemInternal;
+static void *m_pVRControlPanel;
+static void *m_pVROculusDirect;
+static void *m_pVRPaths;
+static void *m_pVRRenderModelsInternal;
+static void *m_pVRSceneGraph;
+static void *m_pVRTrackedCameraInternal;
+static void *m_pVRVirtualDisplay;
 
 static void *g_pVRModule = NULL;
 static IVRClientCore *g_pHmdSystem = NULL;
@@ -116,6 +127,16 @@ void VR_ShutdownInternal()
 	}
 
 	++g_nVRToken;
+
+	m_pLiquidVR = nullptr;
+	m_pVRCompositorSystemInternal = nullptr;
+	m_pVRControlPanel = nullptr;
+	m_pVROculusDirect = nullptr;
+	m_pVRPaths = nullptr;
+	m_pVRRenderModelsInternal = nullptr;
+	m_pVRSceneGraph = nullptr;
+	m_pVRTrackedCameraInternal = nullptr;
+	m_pVRVirtualDisplay = nullptr;
 }
 
 EVRInitError VR_LoadHmdSystemInternal()
@@ -369,5 +390,88 @@ const char *VR_GetStringForHmdError( EVRInitError error )
 	return VR_GetVRInitErrorAsEnglishDescription( error );
 }
 
+// Without exporting the functions below, Half-Life: Alyx won't work with this DLL.
+
+static const char * const ILiquidVR_Version = "ILiquidVR_001";
+static const char * const IVRCompositorSystemInternal_Version = "IVRCompositorSystemInternal_001";
+static const char * const IVRControlPanel_Version = "IVRControlPanel_006";
+static const char * const IVROculusDirect_Version = "IVROculusDirect_001";
+static const char * const IVRRenderModelsInternal_Version = "IVRRenderModelsInternal_XXX";
+static const char * const IVRSceneGraph_Version = "IVRSceneGraph_001";
+static const char * const IVRTrackedCameraInternal_Version = "IVRTrackedCameraInternal_001";
+static const char * const IVRVirtualDisplay_Version = "IVRVirtualDisplay_001";
+
+VR_EXPORT_INTERFACE void *VR_CALLTYPE LiquidVR();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRCompositorSystemInternal();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRControlPanel();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VROculusDirect();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRPaths();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRRenderModelsInternal();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRSceneGraph();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRTrackedCameraInternal();
+VR_EXPORT_INTERFACE void *VR_CALLTYPE VRVirtualDisplay();
+
+void *LiquidVR()
+{
+	if ( m_pLiquidVR == nullptr )
+		m_pLiquidVR = vr::VR_GetGenericInterface( ILiquidVR_Version, nullptr);
+	return m_pLiquidVR;
 }
 
+void *VRCompositorSystemInternal()
+{
+	if ( m_pVRCompositorSystemInternal == nullptr )
+		m_pVRCompositorSystemInternal = vr::VR_GetGenericInterface( IVRCompositorSystemInternal_Version, nullptr);
+	return m_pVRCompositorSystemInternal;
+}
+
+void *VRControlPanel()
+{
+	if ( m_pVRControlPanel == nullptr )
+		m_pVRControlPanel = vr::VR_GetGenericInterface( IVRControlPanel_Version, nullptr);
+	return m_pVRControlPanel;
+}
+
+void *VROculusDirect()
+{
+	if ( m_pVROculusDirect == nullptr )
+		m_pVROculusDirect = vr::VR_GetGenericInterface( IVROculusDirect_Version, nullptr);
+	return m_pVROculusDirect;
+}
+
+void *VRPaths()
+{
+	if ( m_pVRPaths == nullptr )
+		m_pVRPaths = vr::VR_GetGenericInterface( IVRPaths_Version, nullptr);
+	return m_pVRPaths;
+}
+
+void *VRRenderModelsInternal()
+{
+	if ( m_pVRRenderModelsInternal == nullptr )
+		m_pVRRenderModelsInternal = vr::VR_GetGenericInterface( IVRRenderModelsInternal_Version, nullptr);
+	return m_pVRRenderModelsInternal;
+}
+
+void *VRSceneGraph()
+{
+	if ( m_pVRSceneGraph == nullptr )
+		m_pVRSceneGraph = vr::VR_GetGenericInterface( IVRSceneGraph_Version, nullptr);
+	return m_pVRSceneGraph;
+}
+
+void *VRTrackedCameraInternal()
+{
+	if ( m_pVRTrackedCameraInternal == nullptr )
+		m_pVRTrackedCameraInternal = vr::VR_GetGenericInterface( IVRTrackedCameraInternal_Version, nullptr);
+	return m_pVRTrackedCameraInternal;
+}
+
+void *VRVirtualDisplay()
+{
+	if ( m_pVRVirtualDisplay == nullptr )
+		m_pVRVirtualDisplay = vr::VR_GetGenericInterface( IVRVirtualDisplay_Version, nullptr);
+	return m_pVRVirtualDisplay;
+}
+
+}
