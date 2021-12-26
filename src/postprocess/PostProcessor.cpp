@@ -623,5 +623,62 @@ namespace vr {
 				}
 			}
 		}
+
+		CheckHotkeys();
+	}
+
+	void PostProcessor::CheckHotkeys() {
+		bool isShiftPressed = GetAsyncKeyState( VK_LSHIFT ) || GetAsyncKeyState( VK_RSHIFT );
+		if (!isShiftPressed && Config::Instance().hotkeysRequireShift)
+			return;
+		bool isCtrlPressed = GetAsyncKeyState( VK_LCONTROL ) || GetAsyncKeyState( VK_RCONTROL );
+		if (!isCtrlPressed && Config::Instance().hotkeysRequireCtrl)
+			return;
+		bool isAltPressed = GetAsyncKeyState( VK_LMENU ) || GetAsyncKeyState( VK_RMENU );
+		if (!isAltPressed && Config::Instance().hotkeysRequireAlt)
+			return;
+
+		if (IsHotkeyActive( Config::Instance().hotkeyToggleUseNis )) {
+			Config::Instance().useNis = !Config::Instance().useNis;
+			Log() << "Now using " << (Config::Instance().useNis ? "NIS" : "FSR") << std::endl;
+			Reset();
+		}
+
+		if (IsHotkeyActive( Config::Instance().hotkeyToggleDebugMode )) {
+			Config::Instance().debugMode = !Config::Instance().debugMode;
+			Log() << "Debug mode is now " << (Config::Instance().debugMode ? "enabled" : "disabled") << std::endl;
+			Reset();
+		}
+
+		if (IsHotkeyActive( Config::Instance().hotkeyDecreaseSharpness )) {
+			Config::Instance().sharpness = max(Config::Instance().sharpness - 0.05f, 0.0f);
+			Log() << "Sharpness is now at " << Config::Instance().sharpness << std::endl;
+			Reset();
+		}
+
+		if (IsHotkeyActive( Config::Instance().hotkeyIncreaseSharpness )) {
+			Config::Instance().sharpness += 0.05f;
+			Log() << "Sharpness is now at " << Config::Instance().sharpness << std::endl;
+			Reset();
+		}
+
+		if (IsHotkeyActive( Config::Instance().hotkeyDecreaseRadius )) {
+			Config::Instance().radius = max(Config::Instance().radius - 0.05f, 0.0f);
+			Log() << "Sharpening radius is now at " << Config::Instance().radius << std::endl;
+			Reset();
+		}
+
+		if (IsHotkeyActive( Config::Instance().hotkeyIncreaseRadius )) {
+			Config::Instance().radius += 0.05f;
+			Log() << "Sharpening radius is now at " << Config::Instance().radius << std::endl;
+			Reset();
+		}
+	}
+
+	bool PostProcessor::IsHotkeyActive( int keyCode ) {
+		bool isPressedNow = GetAsyncKeyState( keyCode );
+		bool isNewlyPressed = !wasKeyPressedBefore[keyCode] && isPressedNow;
+		wasKeyPressedBefore[keyCode] = isPressedNow;
+		return isNewlyPressed;
 	}
 }

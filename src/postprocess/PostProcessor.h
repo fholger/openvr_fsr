@@ -79,5 +79,10 @@ namespace vr {
 		int currentQuery = 0;
 		float summedGpuTime = 0.0f;
 		int countedQueries = 0;
+
+		void CheckHotkeys();
+		bool IsHotkeyActive(int keyCode);
+
+		std::unordered_map<int, bool> wasKeyPressedBefore;
 	};
 }
