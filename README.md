@@ -84,6 +84,26 @@ sharp for your taste, consider experimenting with lower values.
 To switch between FSR and NIS, set the parameter `useNIS` either to `false` (FSR, default)
 or `true` (NIS).
 
+### In-game hotkeys
+
+By default, a few hotkeys are enabled which you can use to modify certain options of
+the mod on the fly. While it is not technically possible to switch the mod on and off,
+you can switch between FSR and NIS and also adjust the sharpness and sharpen radius
+dynamically. Note that any changes you make via the hotkeys is *not* persisted in
+the config file and will be reset to the values i the config on the next game launch.
+
+By default, the following hotkeys are available. You can configure the keys in the
+config file and also disable hotkeys altogether.
+
+* F1 - toggles between FSR and NIS.
+* F2 - toggles debug mode on or off.
+* F3 - decreases sharpness by 0.05.
+* F4 - increases sharpness by 0.05.
+* F5 - decreases sharpening radius by 0.05.
+* F6 - increases sharpening radius by 0.05.
+* F7 - take a screen capture of the final output and save it as a .dds file next to
+     the DLL location
+
 ### Performance considerations
 
 While rendering at a lower resolution will save you performance (which is the entire point),
