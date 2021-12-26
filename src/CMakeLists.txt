@@ -52,6 +52,8 @@ set(POSTPROCESS_FILES
 	postprocess/VrHooks.cpp
 	postprocess/PostProcessor.h
 	postprocess/PostProcessor.cpp
+	postprocess/ScreenGrab11.h
+	postprocess/ScreenGrab11.cpp
 )
 set(FSR_FILES
 	fsr/ffx_a.h
@@ -167,6 +169,7 @@ set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_MODEL "5.0")
 set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "shader_nis_sharpen.h")
 set_property(SOURCE nis/NIS_Sharpen.hlsl PROPERTY VS_SHADER_VARIABLE_NAME "g_NISSharpenShader")
 
+set(EXTRA_LIBS ${EXTRA_LIBS} dxguid)
 target_link_libraries(${LIBNAME} ${EXTRA_LIBS} ${CMAKE_DL_LIBS})
 target_include_directories(${LIBNAME} PUBLIC ${OPENVR_HEADER_DIR})
 
