@@ -627,7 +627,9 @@ namespace vr {
 			}
 		}
 
-		CheckHotkeys();
+		if (Config::Instance().hotkeysEnabled) {
+			CheckHotkeys();
+		}
 
 		if (takeCapture && eEye == Eye_Left) {
 			SaveTextureToFile(outputTexture);
