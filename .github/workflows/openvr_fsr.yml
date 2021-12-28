@@ -1,0 +1,43 @@
+name: OpenVR FSR
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+  
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        include:
+          - os: windows-latest
+            triplet: x64-windows
+    env:
+      # Indicates the CMake build directory where project files and binaries are being produced.
+      CMAKE_BUILD_DIR: ${{ github.workspace }}/build
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+      
+    - uses: lukka/get-cmake@latest
+    
+    - name: Configure CMake
+      run: cmake -S "${{github.workspace}}" -B "${{env.CMAKE_BUILD_DIR}}" -D BUILD_SHARED=1
+      
+    - name: Build
+      run: cmake --build "${{env.CMAKE_BUILD_DIR}}" --config Release --target ALL_BUILD
+      
+    - name: Upload a build artifact
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: openvr-fsr-${{ matrix.triplet }} # optional, default is artifact
+        # A file, directory or wildcard pattern that describes what to upload
+        # Using wildcards so that only the driver directory gets included (if you specify it, then it won't be included)
+        path: |
+          ${{github.workspace}}/bin/win64/Release/openvr_api.dll
+          ${{github.workspace}}/bin/win64/Release/openvr_mod.cfg
