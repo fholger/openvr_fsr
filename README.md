@@ -6,6 +6,12 @@ either [AMD's FidelityFX SuperResolution](https://gpuopen.com/fidelityfx-superre
 or [NVIDIA's Image Scaling](https://github.com/NVIDIAGameWorks/NVIDIAImageScaling)
 to many SteamVR games, as long as they use D3D11.
 
+*NOTE*: I am working on a new project that supercedes this mod. It supports the same
+upscaling methods as this mod, but in addition also works with the Oculus runtime and
+will eventually add additional performance enhancement tools. As a consequence, this
+project is in maintenance mode, and I encourage you to check out the new project:
+[VR Performance Toolkit](https://github.com/fholger/vrperfkit)
+
 ### About AMD's FidelityFX Super Resolution
 
 FidelityFX Super Resolution (FSR for short) is an upscaling technique developed by AMD,
