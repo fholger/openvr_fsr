@@ -686,7 +686,7 @@ namespace vr {
 		}
 
 		if (IsHotkeyActive( Config::Instance().hotkeyIncreaseSharpness )) {
-			Config::Instance().sharpness += 0.05f;
+			Config::Instance().sharpness = min(Config::Instance().sharpness + 0.05f, 1.0f);
 			Log() << "Sharpness is now at " << Config::Instance().sharpness << std::endl;
 			Reset();
 		}
@@ -698,7 +698,7 @@ namespace vr {
 		}
 
 		if (IsHotkeyActive( Config::Instance().hotkeyIncreaseRadius )) {
-			Config::Instance().radius += 0.05f;
+			Config::Instance().radius = min(Config::Instance().radius + 0.05f, 2.0f);
 			Log() << "Sharpening radius is now at " << Config::Instance().radius << std::endl;
 			Reset();
 		}
